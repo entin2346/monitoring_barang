@@ -1,5 +1,51 @@
 <?php
+session_start();
+
+if(!isset($_SESSION['login'])){
+    header("Location: ../login/index.php");
+    exit;
+}
+
 include "../config/koneksi.php";
+
+$cari = $_GET['cari'] ?? '';
+$cari = mysqli_real_escape_string($conn, $cari);
+
+// Pagination
+$limit = 25;
+
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+
+if($page < 1){
+    $page = 1;
+}
+
+$offset = ($page - 1) * $limit;
+
+// Hitung total data
+$total_query = mysqli_query($conn,"
+    SELECT COUNT(*) as total
+    FROM material_gudang
+    WHERE nama_material IS NOT NULL
+    AND nama_material <> ''
+    AND nama_material LIKE '%$cari%'
+");
+
+$total_row = mysqli_fetch_assoc($total_query);
+$total_data = $total_row['total'];
+
+$total_halaman = ceil($total_data / $limit);
+
+// Ambil data
+$query = mysqli_query($conn,"
+    SELECT *
+    FROM material_gudang
+    WHERE nama_material IS NOT NULL
+    AND nama_material <> ''
+    AND nama_material LIKE '%$cari%'
+    ORDER BY nama_material ASC
+    LIMIT $offset,$limit
+");
 ?>
 
 <!DOCTYPE html>
@@ -8,76 +54,200 @@ include "../config/koneksi.php";
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Material Gudang</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
 
-<div class="container mt-4">
+<div class="container-fluid mt-4">
 
-    <h2>Data Material Gudang</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
 
-    <div class="d-flex justify-content-between mb-3">
-        <a href="../dashboard/index.php" class="btn btn-secondary">Kembali</a>
+        <h2>Data Material Gudang</h2>
+
+        <div>
+
+<a href="../dashboard/index.php"
+class="btn btn-secondary">
+← Dashboard
+</a>
+
+<a href="../export/material_excel.php"
+class="btn btn-success">
+📥 Export Excel
+</a>
+
+</div>
+
     </div>
 
     <form method="GET" class="mb-3">
-        <input 
-            type="text" 
-            name="cari" 
-            class="form-control" 
-            placeholder="Cari Material..." 
-            value="<?= htmlspecialchars($_GET['cari'] ?? ''); ?>">
+
+        <div class="row">
+
+            <div class="col-md-6">
+
+                <input
+                    type="text"
+                    name="cari"
+                    class="form-control"
+                    placeholder="Cari Material..."
+                    value="<?= htmlspecialchars($cari); ?>">
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary w-100">
+                    Cari
+                </button>
+
+            </div>
+
+        </div>
+
     </form>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped">
-            <thead class="table-light">
-                <tr>
-                    <th>No</th>
-                    <th>Nama Material</th>
-                    <th>Sat</th>
-                    <th>Jumlah</th>
-                    <th>No Rak</th>
-                    <th>Kondisi</th>
-                    <th>Lokasi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                // Menangkap input pencarian
-                $cari = $_GET['cari'] ?? '';
+    <div class="alert alert-info">
 
-                // Query dengan filter pencarian
-                $query = mysqli_query(
-                    $conn,
-                    "SELECT * FROM material_gudang 
-                     WHERE nama_material LIKE '%$cari%' 
-                     ORDER BY nama_material ASC"
-                );
+        Total Material:
+        <b><?= number_format($total_data); ?></b>
 
-                $no = 1;
-                if (mysqli_num_rows($query) > 0) {
-                    while($d = mysqli_fetch_assoc($query)) {
-                ?>
-                <tr>
-                    <td><?= $no++; ?></td>
-                    <td><?= htmlspecialchars($d['nama_material']); ?></td>
-                    <td><?= htmlspecialchars($d['satuan']); ?></td>
-                    <td><?= htmlspecialchars($d['jumlah']); ?></td>
-                    <td><?= htmlspecialchars($d['no_rak']); ?></td>
-                    <td><?= htmlspecialchars($d['kondisi']); ?></td>
-                    <td><?= htmlspecialchars($d['lokasi_penyimpanan']); ?></td>
-                </tr>
-                <?php 
-                    }
-                } else {
-                    echo "<tr><td colspan='7' class='text-center'>Data tidak ditemukan</td></tr>";
-                }
-                ?>
-            </tbody>
-        </table>
     </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped table-hover table-sm">
+
+            <thead class="table-dark">
+
+                <tr>
+                    <th width="60">No</th>
+                    <th>Nama Material</th>
+                    <th width="80">Sat</th>
+                    <th width="100">Jumlah</th>
+                    <th width="100">No Rak</th>
+                    <th width="120">Kondisi</th>
+                    <th width="200">Lokasi</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+            <?php
+
+            $no = $offset + 1;
+
+            if(mysqli_num_rows($query) > 0){
+
+                while($d = mysqli_fetch_assoc($query)){
+
+            ?>
+
+                <tr>
+
+                    <td><?= $no++; ?></td>
+
+                    <td><?= htmlspecialchars($d['nama_material']); ?></td>
+
+                    <td><?= htmlspecialchars($d['satuan']); ?></td>
+
+                    <td><?= number_format($d['jumlah']); ?></td>
+
+                    <td><?= htmlspecialchars($d['no_rak']); ?></td>
+
+                    <td><?= htmlspecialchars($d['kondisi']); ?></td>
+
+                    <td><?= htmlspecialchars($d['lokasi_penyimpanan']); ?></td>
+
+                </tr>
+
+            <?php
+
+                }
+
+            } else {
+
+            ?>
+
+                <tr>
+                    <td colspan="7" class="text-center">
+                        Data tidak ditemukan
+                    </td>
+                </tr>
+
+            <?php } ?>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <nav class="mt-3">
+
+        <ul class="pagination flex-wrap">
+
+            <?php if($page > 1){ ?>
+
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?cari=<?= urlencode($cari); ?>&page=<?= $page-1; ?>">
+                       Previous
+                    </a>
+                </li>
+
+            <?php } ?>
+
+            <?php
+
+            for($i=1; $i<=$total_halaman; $i++){
+
+                if(
+                    $i == 1 ||
+                    $i == $total_halaman ||
+                    ($i >= $page-2 && $i <= $page+2)
+                ){
+
+            ?>
+
+                <li class="page-item <?= ($page==$i)?'active':''; ?>">
+
+                    <a class="page-link"
+                       href="?cari=<?= urlencode($cari); ?>&page=<?= $i; ?>">
+
+                        <?= $i; ?>
+
+                    </a>
+
+                </li>
+
+            <?php
+
+                }
+
+            }
+
+            ?>
+
+            <?php if($page < $total_halaman){ ?>
+
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?cari=<?= urlencode($cari); ?>&page=<?= $page+1; ?>">
+                       Next
+                    </a>
+                </li>
+
+            <?php } ?>
+
+        </ul>
+
+    </nav>
 
 </div>
 
