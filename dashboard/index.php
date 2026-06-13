@@ -52,7 +52,7 @@ $total_stok = mysqli_fetch_assoc(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Monitoring Material</title>
+    <title>I-CALM Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -69,8 +69,9 @@ $total_stok = mysqli_fetch_assoc(
         .sidebar h3 { color: white; text-align: center; margin-bottom: 30px; }
         .sidebar a { display: block; color: white; text-decoration: none; padding: 15px 20px; }
         .sidebar a:hover { background: rgba(255,255,255,0.2); }
-        .content { margin-left: 250px; padding: 20px; }
+        .content { margin-left: 250px; padding: 0; }
         .card { border: none; border-radius: 15px; }
+        .navbar-custom { background: #0d6efd; padding: 10px 20px; }
     </style>
 </head>
 <body>
@@ -88,56 +89,65 @@ $total_stok = mysqli_fetch_assoc(
 </div>
 
 <div class="content">
-    
-    <div class="mb-4">
-        <h3>Dashboard Monitoring Material</h3>
-        <p>Selamat datang, <b><?= htmlspecialchars($_SESSION['nama']); ?></b></p>
-    </div>
+    <nav class="navbar navbar-custom navbar-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">I-CALM</a>
+            <span class="navbar-text text-white ms-3">
+                Inventory Control & Logistics Monitoring
+            </span>
+        </div>
+    </nav>
 
-    <div class="row">
-        <div class="col-md-4"><div class="card bg-primary text-white shadow"><div class="card-body"><h5>Total Material</h5><h2><?= number_format($total_material['total'] ?? 0); ?></h2></div></div></div>
-        <div class="col-md-4"><div class="card bg-success text-white shadow"><div class="card-body"><h5>Total Data BA</h5><h2><?= number_format($total_ba['total'] ?? 0); ?></h2></div></div></div>
-        <div class="col-md-4"><div class="card bg-warning shadow"><div class="card-body"><h5>Total Stok Material</h5><h2><?= number_format($total_stok['total'] ?? 0); ?></h2></div></div></div>
-    </div>
+    <div class="p-4">
+        <div class="mb-4">
+            <h3>Dashboard Monitoring Material</h3>
+            <p>Selamat datang, <b><?= htmlspecialchars($_SESSION['nama']); ?></b></p>
+        </div>
 
-    <hr class="my-4">
+        <div class="row">
+            <div class="col-md-4"><div class="card bg-primary text-white shadow"><div class="card-body"><h5>Total Material</h5><h2><?= number_format($total_material['total'] ?? 0); ?></h2></div></div></div>
+            <div class="col-md-4"><div class="card bg-success text-white shadow"><div class="card-body"><h5>Total Data BA</h5><h2><?= number_format($total_ba['total'] ?? 0); ?></h2></div></div></div>
+            <div class="col-md-4"><div class="card bg-warning shadow"><div class="card-body"><h5>Total Stok Material</h5><h2><?= number_format($total_stok['total'] ?? 0); ?></h2></div></div></div>
+        </div>
 
-    <h4>10 Data BA Terbaru</h4>
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr><th>No</th><th>Tanggal</th><th>Nama Barang</th><th>Jumlah</th><th>Tujuan</th></tr>
-            </thead>
-            <tbody>
-                <?php
-                $ba_terbaru = mysqli_query($conn,"
-                    SELECT * FROM database_ba 
-                    WHERE nama_barang IS NOT NULL AND nama_barang <> '' 
-                    ORDER BY tanggal DESC, id DESC LIMIT 10
-                ");
-                $no = 1;
-                while($d = mysqli_fetch_assoc($ba_terbaru)){
-                ?>
-                <tr>
-                    <td><?= $no++; ?></td>
-                    <td><?= (!empty($d['tanggal']) && $d['tanggal'] != '0000-00-00') ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
-                    <td><?= htmlspecialchars($d['nama_barang']); ?></td>
-                    <td><?= number_format($d['jumlah']); ?></td>
-                    <td><?= htmlspecialchars($d['tujuan']); ?></td>
-                </tr>
-                <?php } ?>
-            </tbody>
-        </table>
-    </div>
+        <hr class="my-4">
 
-    <hr class="mt-5">
-    <div class="card shadow mb-4">
-        <div class="card-header"><h5>Top 10 Material Terbanyak</h5></div>
-        <div class="card-body">
-            <canvas id="chartMaterial"></canvas>
+        <h4>10 Data BA Terbaru</h4>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped bg-white">
+                <thead class="table-dark">
+                    <tr><th>No</th><th>Tanggal</th><th>Nama Barang</th><th>Jumlah</th><th>Tujuan</th></tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $ba_terbaru = mysqli_query($conn,"
+                        SELECT * FROM database_ba 
+                        WHERE nama_barang IS NOT NULL AND nama_barang <> '' 
+                        ORDER BY tanggal DESC, id DESC LIMIT 10
+                    ");
+                    $no = 1;
+                    while($d = mysqli_fetch_assoc($ba_terbaru)){
+                    ?>
+                    <tr>
+                        <td><?= $no++; ?></td>
+                        <td><?= (!empty($d['tanggal']) && $d['tanggal'] != '0000-00-00') ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
+                        <td><?= htmlspecialchars($d['nama_barang']); ?></td>
+                        <td><?= number_format($d['jumlah']); ?></td>
+                        <td><?= htmlspecialchars($d['tujuan']); ?></td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+
+        <hr class="mt-5">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white"><h5>Top 10 Material Terbanyak</h5></div>
+            <div class="card-body">
+                <canvas id="chartMaterial"></canvas>
+            </div>
         </div>
     </div>
-
 </div>
 
 <script>
