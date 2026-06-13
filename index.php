@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-<?php
-header("Location: dashboard/index.php");
-=======
 <?php
 include "../config/koneksi.php";
 ?>
@@ -26,11 +22,11 @@ include "../config/koneksi.php";
     </div>
 
     <form method="GET" class="mb-3">
-        <input 
-            type="text" 
-            name="cari" 
-            class="form-control" 
-            placeholder="Cari Material..." 
+        <input
+            type="text"
+            name="cari"
+            class="form-control"
+            placeholder="Cari Material..."
             value="<?= htmlspecialchars($_GET['cari'] ?? ''); ?>">
     </form>
 
@@ -49,20 +45,19 @@ include "../config/koneksi.php";
             </thead>
             <tbody>
                 <?php
-                // Menangkap input pencarian
                 $cari = $_GET['cari'] ?? '';
 
-                // Query dengan filter pencarian
                 $query = mysqli_query(
                     $conn,
-                    "SELECT * FROM material_gudang 
-                     WHERE nama_material LIKE '%$cari%' 
+                    "SELECT * FROM material_gudang
+                     WHERE nama_material LIKE '%$cari%'
                      ORDER BY nama_material ASC"
                 );
 
                 $no = 1;
+
                 if (mysqli_num_rows($query) > 0) {
-                    while($d = mysqli_fetch_assoc($query)) {
+                    while ($d = mysqli_fetch_assoc($query)) {
                 ?>
                 <tr>
                     <td><?= $no++; ?></td>
@@ -73,7 +68,7 @@ include "../config/koneksi.php";
                     <td><?= htmlspecialchars($d['kondisi']); ?></td>
                     <td><?= htmlspecialchars($d['lokasi_penyimpanan']); ?></td>
                 </tr>
-                <?php 
+                <?php
                     }
                 } else {
                     echo "<tr><td colspan='7' class='text-center'>Data tidak ditemukan</td></tr>";
@@ -87,4 +82,3 @@ include "../config/koneksi.php";
 
 </body>
 </html>
->>>>>>> 7cd6140927ddbdead500c2e58f394065a3a5f38e
