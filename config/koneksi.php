@@ -1,13 +1,15 @@
 <?php
 
-$conn = mysqli_connect(
-    "localhost",
-    "root",
-    "",
-    "monitoring_barang"
-);
+$host = "localhost";
+$user = "root";
+$pass = "";
+$db   = "monitoring_barang";
 
-if(!$conn){
-    die("Koneksi gagal");
+/** @var mysqli $conn */
+$conn = mysqli_connect($host, $user, $pass, $db);
+
+if (!$conn) {
+    die("Koneksi gagal: " . mysqli_connect_error());
 }
+
 ?>
