@@ -2,7 +2,7 @@
 include "../config/koneksi.php";
 
 /* ======================
-   RINGKASAN DATA BA
+    RINGKASAN DATA BA
 ====================== */
 
 $barang_masuk = mysqli_fetch_assoc(
@@ -55,6 +55,7 @@ $query = mysqli_query($conn,"SELECT * FROM database_ba WHERE nama_barang IS NOT 
         .header-icalm p{ margin:0; opacity:.9; }
         .stat-card h3{ font-weight:bold; }
         .table{ background:white; }
+        .table th, .table td{ white-space: nowrap; vertical-align: middle; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -76,30 +77,10 @@ $query = mysqli_query($conn,"SELECT * FROM database_ba WHERE nama_barang IS NOT 
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-3">
-            <a href="barang_masuk.php" style="text-decoration:none;">
-                <div class="card stat-card bg-success text-white shadow"><div class="card-body text-center"><h6>Barang Masuk</h6><h3><?= number_format($barang_masuk['total'] ?? 0); ?></h3></div></div>
-            </a>
-        </div>
-        <div class="col-md-3">
-            <a href="barang_keluar.php" style="text-decoration:none;">
-                <div class="card stat-card bg-danger text-white shadow"><div class="card-body text-center"><h6>Barang Keluar</h6><h3><?= number_format($barang_keluar['total'] ?? 0); ?></h3></div></div>
-            </a>
-        </div>
-        <div class="col-md-3">
-            <a href="stok_barang.php" style="text-decoration:none;">
-                <div class="card stat-card bg-primary text-white shadow"><div class="card-body text-center"><h6>Sisa Stok</h6><h3><?= number_format($stok); ?></h3></div></div>
-            </a>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-warning shadow"><div class="card-body text-center"><h6>Total Data BA</h6><h3><?= number_format($total_ba['total']); ?></h3></div></div>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <div class="col-md-4"><div class="alert alert-success"><b>Barang Masuk</b><br>Klik kartu hijau untuk melihat seluruh barang masuk.</div></div>
-        <div class="col-md-4"><div class="alert alert-danger"><b>Barang Keluar</b><br>Klik kartu merah untuk melihat seluruh barang keluar.</div></div>
-        <div class="col-md-4"><div class="alert alert-primary"><b>Stok Barang</b><br>Klik kartu biru untuk melihat stok material.</div></div>
+        <div class="col-md-3"><a href="barang_masuk.php" style="text-decoration:none;"><div class="card stat-card bg-success text-white shadow"><div class="card-body text-center"><h6>Barang Masuk</h6><h3><?= number_format($barang_masuk['total'] ?? 0); ?></h3></div></div></a></div>
+        <div class="col-md-3"><a href="barang_keluar.php" style="text-decoration:none;"><div class="card stat-card bg-danger text-white shadow"><div class="card-body text-center"><h6>Barang Keluar</h6><h3><?= number_format($barang_keluar['total'] ?? 0); ?></h3></div></div></a></div>
+        <div class="col-md-3"><a href="stok_barang.php" style="text-decoration:none;"><div class="card stat-card bg-primary text-white shadow"><div class="card-body text-center"><h6>Sisa Stok</h6><h3><?= number_format($stok); ?></h3></div></div></a></div>
+        <div class="col-md-3"><div class="card stat-card bg-warning shadow"><div class="card-body text-center"><h6>Total Data BA</h6><h3><?= number_format($total_ba['total']); ?></h3></div></div></div>
     </div>
 
     <form method="GET" class="mb-3">
@@ -113,36 +94,48 @@ $query = mysqli_query($conn,"SELECT * FROM database_ba WHERE nama_barang IS NOT 
 
     <div class="table-responsive">
         <table class="table table-bordered table-striped table-hover table-sm">
-            <thead class="table-dark">
-                <tr><th>No</th><th>Tanggal</th><th>Nama Barang</th><th>Jumlah</th><th>Tujuan</th><th>Kondisi</th><th>Aksi</th></tr>
+            <thead class="table-dark text-center">
+                <tr>
+                    <th>No</th><th>Tanggal</th><th>Nama Material</th><th>Merk/Jenis</th><th>Jenis Material</th><th>Sumber Material</th><th>Satuan</th><th>Jumlah</th><th>Nomor Seri</th><th>Pemasok/Asal Material</th><th>Kategori Material</th><th>Keterangan</th><th>Aksi</th>
+                </tr>
             </thead>
             <tbody>
-            <?php
-            $no = $offset + 1;
-            if(mysqli_num_rows($query) > 0){
-                while($d = mysqli_fetch_assoc($query)){
-                    $tanggal = (!empty($d['tanggal']) && $d['tanggal'] != '0000-00-00') ? date('d-m-Y', strtotime($d['tanggal'])) : '-';
-            ?>
+                <?php
+                $no = $offset + 1;
+                if(mysqli_num_rows($query) > 0){
+                    while($d = mysqli_fetch_assoc($query)){
+                        $tanggal = (!empty($d['tanggal']) && $d['tanggal'] != '0000-00-00') ? date('d-m-Y', strtotime($d['tanggal'])) : '-';
+                ?>
                 <tr>
                     <td><?= $no++; ?></td>
                     <td><?= $tanggal; ?></td>
-                    <td>
-                        <a href="detail.php?id=<?= $d['id']; ?>" style="text-decoration:none;font-weight:bold;">
-                            <?= htmlspecialchars($d['nama_barang']); ?>
-                        </a>
-                    </td>
+                    <td><a href="detail.php?id=<?= $d['id']; ?>" style="text-decoration:none;font-weight:bold;"><?= htmlspecialchars($d['nama_barang']); ?></a></td>
+                    <td><?= htmlspecialchars($d['merk_jenis']); ?></td>
+                    <td><?= htmlspecialchars($d['jenis_barang']); ?></td>
+                    <td><?= htmlspecialchars($d['sumber_barang']); ?></td>
+                    <td><?= htmlspecialchars($d['satuan']); ?></td>
                     <td><?= number_format($d['jumlah']); ?></td>
-                    <td><?= htmlspecialchars($d['tujuan']); ?></td>
-                    <td><?= htmlspecialchars($d['kondisi_material']); ?></td>
+                    <td><?= htmlspecialchars($d['no_seri']); ?></td>
+                    <td><?= htmlspecialchars($d['asal_barang_vendor']); ?></td>
                     <td>
+                        <?php
+                        $kategori = strtoupper($d['jenis_berita_acara']);
+                        if(strpos($kategori,'MASUK') !== false){ echo "<span class='badge bg-success'>MASUK</span>"; }
+                        elseif(strpos($kategori,'KELUAR') !== false || strpos($kategori,'TERPAKAI') !== false){ echo "<span class='badge bg-danger'>KELUAR</span>"; }
+                        elseif(strpos($kategori,'RETURN') !== false || strpos($kategori,'PENGEMBALIAN') !== false){ echo "<span class='badge bg-warning text-dark'>RETURN</span>"; }
+                        else{ echo "<span class='badge bg-secondary'>".$kategori."</span>"; }
+                        ?>
+                    </td>
+                    <td><?= htmlspecialchars($d['keterangan']); ?></td>
+                    <td nowrap>
                         <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm">Detail</a>
                         <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm">Edit</a>
-                        <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Yakin hapus data?')">Hapus</a>
+                        <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm tombol-hapus">🗑 Hapus</a>
                     </td>
                 </tr>
-            <?php } } else { ?>
-                <tr><td colspan="7" class="text-center">Data tidak ditemukan</td></tr>
-            <?php } ?>
+                <?php } } else { ?>
+                <tr><td colspan="13" class="text-center">Data tidak ditemukan</td></tr>
+                <?php } ?>
             </tbody>
         </table>
     </div>
@@ -154,7 +147,30 @@ $query = mysqli_query($conn,"SELECT * FROM database_ba WHERE nama_barang IS NOT 
         <?php } } ?>
         <?php if($page < $total_halaman){ ?><li class="page-item"><a class="page-link" href="?cari=<?= urlencode($cari); ?>&page=<?= $page+1; ?>">Next</a></li><?php } ?>
     </ul></nav>
-
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.querySelectorAll('.tombol-hapus').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+        e.preventDefault();
+        let url = this.getAttribute('href');
+        Swal.fire({
+            title: 'Yakin ingin menghapus?',
+            text: 'Data yang sudah dihapus tidak dapat dikembalikan!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Tidak'
+        }).then((result) => {
+            if(result.isConfirmed){
+                window.location.href = url;
+            }
+        });
+    });
+});
+</script>
 </body>
 </html>

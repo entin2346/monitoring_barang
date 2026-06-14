@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 
 if(!isset($_SESSION['login'])){
@@ -9,7 +8,7 @@ if(!isset($_SESSION['login'])){
 
 include "../config/koneksi.php";
 
-$id = $_GET['id'];
+$id = (int)$_GET['id'];
 
 mysqli_query($conn,"
     DELETE FROM database_ba
@@ -22,3 +21,4 @@ alert('Data berhasil dihapus');
 window.location='index.php';
 </script>
 ";
+?>

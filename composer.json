@@ -1,0 +1,14 @@
+{
+    "name": "acer/monitoring_barang",
+    "description": "Monitoring Barang PLN",
+    "type": "project",
+    "authors": [
+        {
+            "name": "entin2346",
+            "email": "afriantifitri35@gmail.com"
+        }
+    ],
+    "require": {
+        "phpoffice/phpspreadsheet": "^5.8"
+    }
+}
