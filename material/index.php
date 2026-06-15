@@ -18,12 +18,24 @@ if($page < 1){ $page = 1; }
 
 $offset = ($page - 1) * $limit;
 
+$whereCari = "
+(
+    nama_material LIKE '%$cari%'
+    OR satuan LIKE '%$cari%'
+    OR CAST(jumlah AS CHAR) LIKE '%$cari%'
+    OR no_rak LIKE '%$cari%'
+    OR kondisi LIKE '%$cari%'
+    OR lokasi_penyimpanan LIKE '%$cari%'
+    OR keterangan LIKE '%$cari%'
+)
+";
+
 /* TOTAL DATA */
 $total_query = mysqli_query($conn,"
     SELECT COUNT(*) AS total
     FROM material_gudang
     WHERE nama_material <> ''
-    AND nama_material LIKE '%$cari%'
+    AND $whereCari
 ");
 
 $total_data = mysqli_fetch_assoc($total_query)['total'];
@@ -39,10 +51,14 @@ $query = mysqli_query($conn,"
     SELECT *
     FROM material_gudang
     WHERE nama_material <> ''
-    AND nama_material LIKE '%$cari%'
+    AND $whereCari
     ORDER BY nama_material ASC
     LIMIT $offset,$limit
 ");
+
+if(!$query){
+    die(mysqli_error($conn));
+}
 ?>
 
 <!DOCTYPE html>

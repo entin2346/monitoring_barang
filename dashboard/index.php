@@ -43,6 +43,27 @@ $total_ba = mysqli_fetch_assoc(
 $total_stok = mysqli_fetch_assoc(
     mysqli_query($conn,"SELECT SUM(jumlah) as total FROM material_gudang")
 );
+/* =========================
+   GRAFIK MTU
+========================= */
+$grafikMTU = mysqli_query($conn,"
+    SELECT ultg, SUM(mtu_terganti) AS total
+    FROM peremajaan_mtu
+    GROUP BY ultg
+    ORDER BY ultg ASC
+");
+
+if($grafikMTU === false){
+    die("Query MTU Error: ".mysqli_error($conn));
+}
+
+$labelMTU = [];
+$dataMTU = [];
+
+while($m = mysqli_fetch_assoc($grafikMTU)){
+    $labelMTU[] = 'ULTG '.$m['ultg'];
+    $dataMTU[] = (int)$m['total'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -466,13 +487,18 @@ $total_stok = mysqli_fetch_assoc(
                 </table>
             </div>
         </div>
+<div class="chart-card mb-4">
+    <h5>📊 Top 10 Volume Material Tertinggi</h5>
 
-        <div class="chart-card">
-            <h5>📊 Top 10 Volume Material Tertinggi</h5>
-            <div style="position: relative; height:360px; width:100%">
-                <canvas id="chartMaterial"></canvas>
-            </div>
-        </div>
+    <div style="position: relative; height:400px; width:100%">
+        <canvas id="chartMaterial"></canvas>
+    </div>
+</div>
+        <div class="chart-card mt-4">
+    <h5>📊 Grafik Peremajaan MTU 2022-2023</h5>
+
+    <div style="position: relative; height:380px; width:100%">
+        <canvas id="chartMTU"></canvas>
     </div>
 </div>
 
@@ -501,6 +527,7 @@ $total_stok = mysqli_fetch_assoc(
     brandGradient.addColorStop(1, '#2563eb');   
 
     new Chart(ctx, {
+        
         type: 'bar',
         data: {
             labels: <?= json_encode($label); ?>,
@@ -534,6 +561,43 @@ $total_stok = mysqli_fetch_assoc(
         }
     });
 </script>
+<script>
+const ctxMTU = document.getElementById('chartMTU').getContext('2d');
 
+const gradientMTU = ctxMTU.createLinearGradient(0,0,0,400);
+gradientMTU.addColorStop(0,'#38bdf8');
+gradientMTU.addColorStop(1,'#2563eb');
+
+new Chart(ctxMTU,{
+    type:'bar',
+    data:{
+        labels: <?= json_encode($labelMTU); ?>,
+        datasets:[{
+            data: <?= json_encode($dataMTU); ?>,
+            backgroundColor:gradientMTU,
+            borderRadius:8,
+            barThickness:35
+        }]
+    },
+    options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+            legend:{display:false}
+        },
+        scales:{
+            y:{
+                beginAtZero:true,
+                ticks:{ color:'#94a3b8' },
+                grid:{ color:'rgba(255,255,255,0.05)' }
+            },
+            x:{
+                ticks:{ color:'#cbd5e1' },
+                grid:{ display:false }
+            }
+        }
+    }
+});
+</script>
 </body>
 </html>
