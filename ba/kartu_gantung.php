@@ -1,3 +1,42 @@
+<?php
+session_start();
+
+if(!isset($_SESSION['login'])){
+    header("Location: ../login/index.php");
+    exit;
+}
+
+include "../config/koneksi.php";
+
+if(!isset($_GET['id'])){
+    die("ID tidak ditemukan");
+}
+
+$id = (int)$_GET['id'];
+
+$data = mysqli_query($conn,"
+SELECT *
+FROM database_ba
+WHERE id='$id'
+");
+
+$d = mysqli_fetch_assoc($data);
+
+if(!$d){
+    die("Data tidak ditemukan");
+}
+
+$nama_barang = mysqli_real_escape_string($conn,$d['nama_barang']);
+
+$riwayat = mysqli_query($conn,"
+SELECT *
+FROM database_ba
+WHERE nama_barang='$nama_barang'
+ORDER BY tanggal ASC,id ASC
+");
+
+$sisa = 0;
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -162,7 +201,7 @@ body{
             <td class="center">Lokasi</td>
         </tr>
         <tr>
-            <td height="35"></td>
+            <td height="35" class="center"><?= htmlspecialchars($d['tujuan']); ?></td>
         </tr>
     </table>
 
@@ -178,7 +217,7 @@ body{
 <td width="120">Nama Barang :</td>
 
 <td width="500">
-    .............................................................
+    <?= htmlspecialchars($d['nama_barang']); ?>
 </td>
 
 <td rowspan="3" width="130">
@@ -188,7 +227,7 @@ body{
             <td class="center">Satuan</td>
         </tr>
         <tr>
-            <td height="35"></td>
+            <td height="35" class="center"><?= htmlspecialchars($d['satuan']); ?></td>
         </tr>
     </table>
 
@@ -203,7 +242,7 @@ body{
 
 <tr>
 <td>No :</td>
-<td>.............................................................</td>
+<td><?= $d['no_urut']; ?></td>
 </tr>
 
 </table>
@@ -226,18 +265,42 @@ body{
 </tr>
 
 <?php
-for($i=1;$i<=25;$i++){
+while($r = mysqli_fetch_assoc($riwayat)){
+
+$masuk = '';
+$keluar = '';
+
+$jenis = strtoupper(trim($r['jenis_berita_acara']));
+
+if($jenis == 'MASUK'){
+    $masuk = $r['jumlah'];
+    $sisa += $r['jumlah'];
+}
+elseif($jenis == 'KELUAR'){
+    $keluar = $r['jumlah'];
+    $sisa -= $r['jumlah'];
+}
 ?>
 <tr>
-    <td height="22"></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
+
+<td><?= date('d-m-Y',strtotime($r['tanggal'])); ?></td>
+
+<td><?= $r['no_urut']; ?></td>
+
+<td class="center"><?= $masuk; ?></td>
+
+<td class="center"><?= $keluar; ?></td>
+
+<td></td>
+
+<td></td>
+
+<td class="center"><?= $sisa; ?></td>
+
+<td><?= htmlspecialchars($r['keterangan']); ?></td>
+
 </tr>
+
 <?php } ?>
 
 </table>
