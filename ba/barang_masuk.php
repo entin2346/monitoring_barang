@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 
 if(!isset($_SESSION['login'])){
@@ -181,7 +184,42 @@ body{
 
     </div>
 
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>No</th><th>Tanggal</th><th>Nama Material</th><th>Merk/Jenis</th><th>Jenis Material</th>
+                        <th>Sumber</th><th>Satuan</th><th>Jumlah</th><th>No Seri</th>
+                        <th>Pemasok</th><th>Kategori</th><th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $no = 1;
+                    if(mysqli_num_rows($query) > 0){
+                        while($d = mysqli_fetch_assoc($query)){
+                    ?>
+                    <tr>
+                        <td><?= $no++; ?></td>
+                        <td><?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
+                        <td class="fw-bold"><?= htmlspecialchars($d['nama_barang']); ?></td>
+                        <td><?= htmlspecialchars($d['merk_jenis']); ?></td>
+                        <td><?= htmlspecialchars($d['jenis_barang']); ?></td>
+                        <td><?= htmlspecialchars($d['sumber_barang']); ?></td>
+                        <td><?= htmlspecialchars($d['satuan']); ?></td>
+                        <td class="fw-bold text-success"><?= number_format($d['jumlah']); ?></td>
+                        <td><?= htmlspecialchars($d['no_seri']); ?></td>
+                        <td><?= htmlspecialchars($d['asal_barang_vendor']); ?></td>
+                        <td><?= htmlspecialchars($d['kategori_material']); ?></td>
+                        <td><?= htmlspecialchars($d['keterangan']); ?></td>
+                    </tr>
+                    <?php } } else { ?>
+                    <tr><td colspan="12" class="text-center py-5">Data tidak ditemukan</td></tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-
 </body>
 </html>

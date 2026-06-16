@@ -216,7 +216,51 @@ while($d = mysqli_fetch_assoc($query)){
 
 </div>
 
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="text-center">
+                    <tr>
+                        <th>No</th><th>Tanggal</th><th>Nama Material</th><th>Merk/Jenis</th><th>Jenis Material</th>
+                        <th>Sumber</th><th>Satuan</th><th>Stok Saat Ini</th><th>Nomor Seri</th>
+                        <th>Pemasok</th><th>Kategori</th><th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $no = 1;
+                    if(mysqli_num_rows($query) > 0){
+                        while($d = mysqli_fetch_assoc($query)){
+                            $stok = $d['total_masuk'] - $d['total_keluar'];
+                            $badge = ($stok <= 0) ? "danger" : (($stok < 10) ? "warning" : "success");
+                    ?>
+                    <tr>
+                        <td class="text-center fw-bold"><?= $no++; ?></td>
+                        <td class="text-center"><?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
+                        <td class="fw-bold"><?= htmlspecialchars($d['nama_barang']); ?></td>
+                        <td><?= htmlspecialchars($d['merk_jenis']); ?></td>
+                        <td><?= htmlspecialchars($d['jenis_barang']); ?></td>
+                        <td><?= htmlspecialchars($d['sumber_barang']); ?></td>
+                        <td class="text-center"><?= htmlspecialchars($d['satuan']); ?></td>
+                        <td class="text-center">
+                            <span class="badge bg-<?= $badge ?> px-3 rounded-pill"><?= number_format($stok); ?></span>
+                        </td>
+                        <td><?= htmlspecialchars($d['no_seri']); ?></td>
+                        <td><?= htmlspecialchars($d['asal_barang_vendor']); ?></td>
+                        <td><?= htmlspecialchars($d['kategori_material']); ?></td>
+                        <td><?= htmlspecialchars($d['keterangan']); ?></td>
+                    </tr>
+                    <?php 
+                        }
+                    } else {
+                        echo "<tr><td colspan='12' class='text-center py-4'>Data tidak ditemukan</td></tr>";
+                    }
+                    ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
