@@ -16,7 +16,7 @@ $id = (int)$_GET['id'];
 
 $data = mysqli_query($conn,"
 SELECT *
-FROM database_ba
+FROM material_gudang
 WHERE id='$id'
 ");
 
@@ -26,7 +26,7 @@ if(!$d){
     die("Data tidak ditemukan");
 }
 
-$nama_barang = mysqli_real_escape_string($conn,$d['nama_barang']);
+$nama_barang = mysqli_real_escape_string($conn,$d['nama_material']);
 
 $riwayat = mysqli_query($conn,"
 SELECT *
@@ -84,10 +84,9 @@ body{
 
 .judul-kartu{
     text-align:center;
-    font-size:18px;
+    font-size:16px;
     font-weight:bold;
     margin-top:20px;
-    margin-bottom:15px;
 }
 
 .info{
@@ -109,12 +108,12 @@ body{
 }
 
 .nomor{
-    width:120px;
-    height:40px;
-    border:2px solid #000;
-    transform:rotate(-20deg);
-    text-align:center;
-    font-size:11px;
+    width:150px;
+    height:35px;
+    border:1px solid #000;
+    transform:rotate(-22deg);
+    margin-left:10px;
+    margin-top:20px;
 }
 
 .tabel{
@@ -126,7 +125,7 @@ body{
 .tabel td{
     border:1px solid #000;
     font-size:11px;
-    padding:3px;
+    padding:6px;
 }
 
 .tabel th{
@@ -136,6 +135,102 @@ body{
 .center{
     text-align:center;
 }
+
+@page{
+    size:A4 portrait;
+    margin:10mm;
+}
+
+body{
+    font-family:Arial, sans-serif;
+    margin:0;
+    padding:0;
+}
+
+.container{
+    width:190mm;
+    margin:auto;
+}
+
+.header{
+    width:100%;
+}
+
+.logo img{
+    width:45px;
+}
+
+.judul{
+    font-size:11px;
+    font-weight:bold;
+    line-height:18px;
+}
+
+.tug{
+    font-size:11px;
+    font-weight:bold;
+    text-align:right;
+    vertical-align:top;
+}
+
+.nomor-box{
+    width:150px;
+    height:28px;
+    border:1px solid #000;
+    transform:rotate(-22deg);
+    margin-top:35px;
+    margin-left:10px;
+}
+
+.nomor-text{
+    text-align:center;
+    font-weight:bold;
+    font-size:11px;
+    margin-top:25px;
+}
+
+.judul-kartu{
+    text-align:center;
+    font-size:18px;
+    font-weight:bold;
+    text-decoration:underline;
+    margin-top:60px;
+    margin-bottom:25px;
+}
+
+.garis{
+    border-bottom:2px dotted #000;
+    height:20px;
+}
+
+.kotak-kanan{
+    width:105px;
+    border-collapse:collapse;
+}
+
+.kotak-kanan td{
+    border:1px solid #000;
+    text-align:center;
+    font-size:12px;
+}
+
+.info-nama{
+    width:100%;
+    margin-top:10px;
+}
+
+.info-nama td{
+    font-size:12px;
+    padding:2px;
+}
+
+.kotak-kanan td{
+    border:1px solid #000;
+    text-align:center;
+    font-size:12px;
+}
+
+<table class="kotak-kanan" width="100%" cellspacing="0">
 
 @media print{
 
@@ -179,29 +274,90 @@ body{
 </tr>
 </table>
 
+</td>
+
+</tr>
+</table>
+
 <table width="100%">
 <tr>
 
-<td width="180">
-    <div class="nomor">
-        Nomor Material
+<td width="180" valign="top">
+
+    <div class="nomor-box"></div>
+
+    <div class="nomor-text">
+        Nomor Normalisasi
     </div>
+
+    <div style="margin-top:35px;text-align:center;font-weight:bold;">
+        Kartu
+    </div>
+
+    <div style="margin-top:25px;font-weight:bold;">
+        No: ............................
+    </div>
+
 </td>
 
-<td>
+<td valign="top">
+
     <div class="judul-kartu">
         KARTU GANTUNG BARANG
     </div>
+
+    <table class="info-nama">
+
+        <tr>
+            <td width="120">
+                <b>Nama Barang :</b>
+            </td>
+
+            <td>
+                <?= htmlspecialchars($d['nama_material']); ?>
+            </td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td class="garis"></td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td class="garis"></td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td class="garis"></td>
+        </tr>
+
+    </table>
+
 </td>
 
-<td width="130">
+<td width="120" valign="top">
 
-    <table width="100%" border="1" cellspacing="0">
+    <table class="kotak-kanan">
         <tr>
-            <td class="center">Lokasi</td>
+            <td><b>Lokasi</b></td>
         </tr>
         <tr>
-            <td height="35" class="center"><?= htmlspecialchars($d['tujuan']); ?></td>
+            <td height="30">2518</td>
+        </tr>
+    </table>
+
+    <br><br><br><br><br>
+
+    <table class="kotak-kanan">
+        <tr>
+            <td><b>Satuan</b></td>
+        </tr>
+        <tr>
+            <td height="30">
+                <?= htmlspecialchars($d['satuan']); ?>
+            </td>
         </tr>
     </table>
 
@@ -210,43 +366,7 @@ body{
 </tr>
 </table>
 
-<table class="info">
-
-<tr>
-
-<td width="120">Nama Barang :</td>
-
-<td width="500">
-    <?= htmlspecialchars($d['nama_barang']); ?>
-</td>
-
-<td rowspan="3" width="130">
-
-    <table width="100%" border="1" cellspacing="0">
-        <tr>
-            <td class="center">Satuan</td>
-        </tr>
-        <tr>
-            <td height="35" class="center"><?= htmlspecialchars($d['satuan']); ?></td>
-        </tr>
-    </table>
-
-</td>
-
-</tr>
-
-<tr>
-<td>Kartu</td>
-<td>.............................................................</td>
-</tr>
-
-<tr>
-<td>No :</td>
-<td><?= $d['no_urut']; ?></td>
-</tr>
-
-</table>
-
+<br>
 <table class="tabel">
 
 <tr>
@@ -302,7 +422,22 @@ elseif($jenis == 'KELUAR'){
 </tr>
 
 <?php } ?>
-
+<?php
+for($i=0; $i<20; $i++){
+?>
+<tr>
+    <td>&nbsp;</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+</tr>
+<?php
+}
+?>
 </table>
 
 </div>

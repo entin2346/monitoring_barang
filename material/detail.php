@@ -388,10 +388,21 @@ if(!$data){
             </div>
 
             <div class="mt-4 pt-3 d-flex gap-2 border-top" style="border-color: var(--border-light) !important;">
-                <a href="edit.php?id=<?= $data['id']; ?>" class="btn btn-warning btn-sm px-4 py-2 fw-bold text-dark" style="border-radius: 10px; background: #fbbf24; border:none;">
-                    <i class="fa-solid fa-user-pen me-1"></i> Ubah Konfigurasi
-                </a>
-            </div>
+
+    <a href="edit.php?id=<?= $data['id']; ?>"
+       class="btn btn-warning btn-sm px-4 py-2 fw-bold text-dark"
+       style="border-radius: 10px; background: #fbbf24; border:none;">
+        <i class="fa-solid fa-user-pen me-1"></i> Ubah Konfigurasi
+    </a>
+
+    <a href="kartu_gantung.php?id=<?= $data['id']; ?>"
+       target="_blank"
+       class="btn btn-success btn-sm px-4 py-2 fw-bold"
+       style="border-radius: 10px;">
+        <i class="fa-solid fa-print me-1"></i> Cetak Kartu Gantung
+    </a>
+
+</div>
 
         </div>
     </div>

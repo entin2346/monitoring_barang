@@ -163,9 +163,9 @@ $no = 1;
 
 while($d = mysqli_fetch_assoc($query)){
 
-    $stok = $d['total_masuk'] - $d['total_keluar'];
+    $stok = abs($d['total_masuk'] - $d['total_keluar']);
 
-    if($stok <= 0){
+    if($stok == 0){
         $badge = "danger";
     }elseif($stok < 10){
         $badge = "warning";
@@ -230,8 +230,8 @@ while($d = mysqli_fetch_assoc($query)){
                     $no = 1;
                     if(mysqli_num_rows($query) > 0){
                         while($d = mysqli_fetch_assoc($query)){
-                            $stok = $d['total_masuk'] - $d['total_keluar'];
-                            $badge = ($stok <= 0) ? "danger" : (($stok < 10) ? "warning" : "success");
+                            $stok = max(0, $d['total_masuk'] - $d['total_keluar']);
+$badge = ($stok == 0) ? "danger" : (($stok < 10) ? "warning" : "success");
                     ?>
                     <tr>
                         <td class="text-center fw-bold"><?= $no++; ?></td>

@@ -52,7 +52,60 @@ $query = mysqli_query($conn,"
     FROM material_gudang
     WHERE nama_material <> ''
     AND $whereCari
-    ORDER BY nama_material ASC
+    ORDER BY
+        CASE
+            WHEN no_rak='A1' THEN 1
+            WHEN no_rak='A2' THEN 2
+            WHEN no_rak='A3' THEN 3
+
+            WHEN no_rak='B1' THEN 4
+            WHEN no_rak='B2' THEN 5
+            WHEN no_rak='B3' THEN 6
+            WHEN no_rak='B4' THEN 7
+
+            WHEN no_rak='C1' THEN 8
+            WHEN no_rak='C2' THEN 9
+            WHEN no_rak='C3' THEN 10
+
+            WHEN no_rak='D1' THEN 11
+            WHEN no_rak='D2' THEN 12
+            WHEN no_rak='D3' THEN 13
+
+            WHEN no_rak='E1' THEN 14
+            WHEN no_rak='E2' THEN 15
+            WHEN no_rak='E3' THEN 16
+
+            WHEN no_rak='F1' THEN 17
+            WHEN no_rak='F2' THEN 18
+
+            WHEN no_rak='G1' THEN 19
+            WHEN no_rak='G2' THEN 20
+            WHEN no_rak='G3' THEN 21
+
+            WHEN no_rak='H1' THEN 22
+            WHEN no_rak='H2' THEN 23
+            WHEN no_rak='H3' THEN 24
+
+            WHEN no_rak='I1' THEN 25
+            WHEN no_rak='I2' THEN 26
+
+            WHEN no_rak='J1' THEN 27
+            WHEN no_rak='J2' THEN 28
+
+            WHEN no_rak='K1' THEN 29
+            WHEN no_rak='K2' THEN 30
+            WHEN no_rak='K3' THEN 31
+
+            WHEN no_rak='M1' THEN 32
+            WHEN no_rak='M2' THEN 33
+            WHEN no_rak='M3' THEN 34
+
+            WHEN no_rak='PETI' THEN 35
+            WHEN no_rak='RAK ISOLATOR' THEN 36
+
+            ELSE 999
+        END ASC,
+        nama_material ASC
     LIMIT $offset,$limit
 ");
 
