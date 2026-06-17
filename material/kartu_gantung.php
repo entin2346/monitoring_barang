@@ -175,19 +175,50 @@ body{
 
 .nomor-box{
     width:150px;
-    height:28px;
+    height:32px;
     border:1px solid #000;
     transform:rotate(-22deg);
     margin-top:35px;
     margin-left:10px;
+    position:relative;
 }
 
 .nomor-text{
+    position:absolute;
+    width:150px;
     text-align:center;
+    font-size:12px;
     font-weight:bold;
-    font-size:11px;
-    margin-top:25px;
+    transform:rotate(-22deg);
+    margin-top:+10px;
+    margin-left:25px;
 }
+
+.nama-barang-area{
+    width:100%;
+    margin-top:10px;
+}
+
+.nama-baris-1,
+.garis-full{
+    width:90%;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.garis-full{
+    width:90%;
+    height:18px;
+    border-bottom:2px dotted #000;
+}
+
+.garis-full{
+    width:90%;
+    border-bottom:2px dotted #000;
+    height:18px;
+    margin-top:2px;
+}
+
 
 .judul-kartu{
     text-align:center;
@@ -284,19 +315,30 @@ body{
 
 <td width="180" valign="top">
 
-    <div class="nomor-box"></div>
+    <div class="nomor-box">
+</div>
 
-    <div class="nomor-text">
-        Nomor Normalisasi
-    </div>
+<div class="nomor-text">
+    Nomor Normalisasi
+</div>
 
-    <div style="margin-top:35px;text-align:center;font-weight:bold;">
-        Kartu
-    </div>
+    <div style="
+    margin-top:75px;
+    text-align:center;
+    font-weight:bold;
+    font-size:15px;
+">
+    Kartu
+</div>
 
-    <div style="margin-top:25px;font-weight:bold;">
-        No: ............................
-    </div>
+    <div style="
+    margin-top:15px;
+    text-align:center;
+    font-weight:bold;
+    font-size:15px;
+">
+    No: ............................
+</div>
 
 </td>
 
@@ -306,34 +348,19 @@ body{
         KARTU GANTUNG BARANG
     </div>
 
-    <table class="info-nama">
+<div class="nama-barang-area">
 
-        <tr>
-            <td width="120">
-                <b>Nama Barang :</b>
-            </td>
+    <div class="nama-baris-1">
+        <b>Nama Barang :</b>
+        <?= htmlspecialchars($d['nama_material']); ?>
+    </div>
 
-            <td>
-                <?= htmlspecialchars($d['nama_material']); ?>
-            </td>
-        </tr>
+    <div class="garis-full"></div>
+    <div class="garis-full"></div>
+    <div class="garis-full"></div>
 
-        <tr>
-            <td></td>
-            <td class="garis"></td>
-        </tr>
+</div>
 
-        <tr>
-            <td></td>
-            <td class="garis"></td>
-        </tr>
-
-        <tr>
-            <td></td>
-            <td class="garis"></td>
-        </tr>
-
-    </table>
 
 </td>
 
