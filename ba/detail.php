@@ -18,7 +18,6 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
     <title>Detail BA | I-CALM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
@@ -51,15 +50,15 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
 <body>
 
 <div class="sidebar">
-    <h3><i class="fa-solid fa-bolt" style="color:#38bdf8"></i>I-CALM Panel</h3>
-    <a href="../dashboard/index.php"><i class="fa-solid fa-chart-pie me-2"></i>Dashboard</a>
-    <a href="../ba/index.php" class="active-menu"><i class="fa-solid fa-layer-group me-2"></i>Database BA</a>
-    <a href="../login/logout.php" class="logout-button"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a>
+    <h3>⚡ I-CALM Panel</h3>
+    <a href="../dashboard/index.php">📊 Dashboard</a>
+    <a href="../ba/index.php" class="active-menu">🗂️ Database BA</a>
+    <a href="../login/logout.php" class="logout-button">🚪 Logout</a>
 </div>
 
 <div class="content">
     <nav class="navbar navbar-custom">
-        <span class="navbar-brand fw-bold"><i class="fa-solid fa-file-invoice text-primary me-2"></i>DETAIL BERITA ACARA</span>
+        <span class="navbar-brand fw-bold">📄 DETAIL BERITA ACARA</span>
     </nav>
 
     <div class="main-body">
@@ -87,15 +86,19 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
                 <tr><th>Keterangan</th><td><?= $d['keterangan']; ?></td></tr>
                 <tr><th>File BA</th><td>
                     <?php if(!empty($d['file_ba'])): ?>
-                        <a href="../uploads/<?= urlencode($d['file_ba']); ?>" target="_blank" class="btn btn-sm btn-outline-dark"><i class="fa-solid fa-file-lines me-1"></i> Lihat File</a>
+                        <a href="../uploads/<?= urlencode($d['file_ba']); ?>" target="_blank" class="btn btn-sm btn-outline-dark">👁️ Lihat File</a>
                     <?php else: echo "Tidak ada"; endif; ?>
                 </td></tr>
             </table>
             
             <div class="mt-4 pt-3 border-top">
-                <a href="index.php" class="btn btn-secondary px-4">Kembali</a>
-                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning px-4 ms-2">Edit Data</a>
-                <a href="kartu_gantung.php?id=<?= $d['id']; ?>" target="_blank" class="btn btn-success px-4 ms-2">Cetak Kartu Gantung</a>
+                <a href="index.php" class="btn btn-secondary px-4">⬅️ Kembali</a>
+                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning px-4 ms-2">✏️ Edit Data</a>
+                <a href="kartu_gantung.php?id=<?= $d['id']; ?>" target="_blank" class="btn btn-success px-4 ms-2">🏷️ Cetak Kartu Gantung</a>
+                
+                <a href="cetak_tug5.php?id=<?= $d['id']; ?>" target="_blank" class="btn btn-primary px-4 ms-2">
+                    🖨️ Cetak Form TUG 5
+                </a>
             </div>
         </div>
     </div>
