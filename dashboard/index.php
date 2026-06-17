@@ -182,8 +182,13 @@ foreach($ultgList as $ultg){
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+<script>
+Chart.register(ChartDataLabels);
+</script>
+
     
     <style>
         :root {
@@ -605,57 +610,61 @@ if(canvasMTU){
 
     const ctxMTU = canvasMTU.getContext('2d');
 
-    new Chart(ctxMTU,{
-        plugins:[ChartDataLabels],
-        type:'bar',
-        data:{
-            labels: <?= json_encode($labelULTG); ?>,
-            datasets:[
-            {
-                label:'Alat Uji',
-                data: <?= json_encode($dataAlatUji); ?>,
-                backgroundColor:'#2563eb'
-            },
-            {
-                label:'Alat Kerja',
-                data: <?= json_encode($dataAlatKerja); ?>,
-                backgroundColor:'#10b981'
-            },
-            {
-                label:'Material',
-                data: <?= json_encode($dataMaterial); ?>,
-                backgroundColor:'#f59e0b'
-            }
-            ]
+   new Chart(ctxMTU,{
+    type:'bar',
+    data:{
+        labels: <?= json_encode($labelULTG); ?>,
+        datasets:[
+        {
+            label:'Alat Uji',
+            data: <?= json_encode($dataAlatUji); ?>,
+            backgroundColor:'#2563eb'
         },
-
-        options:{
-            responsive:true,
-            maintainAspectRatio:false,
-
-           plugins:{
-    legend:{
-        display:true,
-        position:'top'
-    },
-    datalabels:{
-        color:'#000',
-        anchor:'end',
-        align:'top',
-        font:{
-            weight:'bold',
-            size:11
+        {
+            label:'Alat Kerja',
+            data: <?= json_encode($dataAlatKerja); ?>,
+            backgroundColor:'#10b981'
+        },
+        {
+            label:'Material',
+            data: <?= json_encode($dataMaterial); ?>,
+            backgroundColor:'#f59e0b'
         }
-    }
-},
+        ]
+    },
 
-            scales:{
-                y:{
-                    beginAtZero:true
+    options:{
+        responsive:true,
+        maintainAspectRatio:false,
+
+        plugins:{
+            legend:{
+                display:true,
+                position:'top'
+            },
+
+            datalabels:{
+                color:'#000',
+                anchor:'end',
+                align:'top',
+                offset:2,
+                formatter:function(value){
+                    return value;
+                },
+                font:{
+                    weight:'bold',
+                    size:11
                 }
             }
+        },
+
+        scales:{
+            y:{
+                beginAtZero:true
+            }
         }
-    });
+    }
+});
 
 }
 </script>
