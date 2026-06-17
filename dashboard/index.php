@@ -46,24 +46,131 @@ $total_stok = mysqli_fetch_assoc(
 /* =========================
    GRAFIK MTU
 ========================= */
-$grafikMTU = mysqli_query($conn,"
-    SELECT ultg, SUM(mtu_terganti) AS total
-    FROM peremajaan_mtu
-    GROUP BY ultg
-    ORDER BY ultg ASC
+$grafikBA = mysqli_query($conn,"
+SELECT
+
+    CASE
+        WHEN tujuan LIKE '%JENEPONTO%' THEN 'ULTG JENEPONTO'
+        WHEN tujuan LIKE '%MAROS%' THEN 'ULTG MAROS'
+        WHEN tujuan LIKE '%PANAKUKANG%' THEN 'ULTG PANAKUKANG'
+        WHEN tujuan LIKE '%PARE%' THEN 'ULTG PARE'
+        WHEN tujuan LIKE '%SIDRAP%' THEN 'ULTG SIDRAP'
+        WHEN tujuan LIKE '%WATAMPONE%' THEN 'ULTG WATAMPONE'
+    END AS ultg,
+
+    SUM(CASE WHEN jenis_barang='ALAT UJI' THEN jumlah ELSE 0 END) AS alat_uji,
+
+    SUM(CASE WHEN jenis_barang='ALAT KERJA' THEN jumlah ELSE 0 END) AS alat_kerja,
+
+    SUM(CASE WHEN jenis_barang='MATERIAL' THEN jumlah ELSE 0 END) AS material
+
+FROM database_ba
+
+WHERE
+(
+    tujuan LIKE '%JENEPONTO%'
+    OR tujuan LIKE '%MAROS%'
+    OR tujuan LIKE '%PANAKUKANG%'
+    OR tujuan LIKE '%PARE%'
+    OR tujuan LIKE '%SIDRAP%'
+    OR tujuan LIKE '%WATAMPONE%'
+)
+AND jenis_barang IN ('ALAT UJI','ALAT KERJA','MATERIAL')
+
+GROUP BY ultg
+ORDER BY ultg
 ");
 
-if($grafikMTU === false){
-    die("Query MTU Error: ".mysqli_error($conn));
+
+$labelULTG = [
+    'Jeneponto',
+    'Maros',
+    'Panakukang',
+    'Parepare',
+    'Sidrap',
+    'Watampone'
+];
+
+$dataAlatUji = [];
+$dataAlatKerja = [];
+$dataMaterial = [];
+
+$ultgList = [
+    'JENEPONTO',
+    'MAROS',
+    'PANAKUKANG',
+    'PARE',
+    'SIDRAP',
+    'WATAMPONE'
+];
+
+foreach($ultgList as $ultg){
+
+    $q1 = mysqli_fetch_assoc(mysqli_query($conn,"
+        SELECT COALESCE(SUM(jumlah),0) total
+        FROM database_ba
+        WHERE tujuan LIKE '%$ultg%'
+        AND jenis_barang='ALAT UJI'
+    "));
+    $dataAlatUji[] = (int)$q1['total'];
+
+    $q2 = mysqli_fetch_assoc(mysqli_query($conn,"
+        SELECT COALESCE(SUM(jumlah),0) total
+        FROM database_ba
+        WHERE tujuan LIKE '%$ultg%'
+        AND jenis_barang='ALAT KERJA'
+    "));
+    $dataAlatKerja[] = (int)$q2['total'];
+
+    $q3 = mysqli_fetch_assoc(mysqli_query($conn,"
+        SELECT COALESCE(SUM(jumlah),0) total
+        FROM database_ba
+        WHERE tujuan LIKE '%$ultg%'
+        AND jenis_barang='MATERIAL'
+    "));
+    $dataMaterial[] = (int)$q3['total'];
 }
 
-$labelMTU = [];
-$dataMTU = [];
+$dataAlatUji = [];
+$dataAlatKerja = [];
+$dataMaterial = [];
 
-while($m = mysqli_fetch_assoc($grafikMTU)){
-    $labelMTU[] = 'ULTG '.$m['ultg'];
-    $dataMTU[] = (int)$m['total'];
+$ultgList = [
+    'JENEPONTO',
+    'MAROS',
+    'PANAKUKANG',
+    'PARE',
+    'SIDRAP',
+    'WATAMPONE'
+];
+
+foreach($ultgList as $ultg){
+
+    $q1 = mysqli_fetch_assoc(mysqli_query($conn,"
+        SELECT COALESCE(SUM(jumlah),0) total
+        FROM database_ba
+        WHERE tujuan LIKE '%$ultg%'
+        AND jenis_barang='ALAT UJI'
+    "));
+    $dataAlatUji[] = (int)$q1['total'];
+
+    $q2 = mysqli_fetch_assoc(mysqli_query($conn,"
+        SELECT COALESCE(SUM(jumlah),0) total
+        FROM database_ba
+        WHERE tujuan LIKE '%$ultg%'
+        AND jenis_barang='ALAT KERJA'
+    "));
+    $dataAlatKerja[] = (int)$q2['total'];
+
+    $q3 = mysqli_fetch_assoc(mysqli_query($conn,"
+        SELECT COALESCE(SUM(jumlah),0) total
+        FROM database_ba
+        WHERE tujuan LIKE '%$ultg%'
+        AND jenis_barang='MATERIAL'
+    "));
+    $dataMaterial[] = (int)$q3['total'];
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -76,6 +183,7 @@ while($m = mysqli_fetch_assoc($grafikMTU)){
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     
     <style>
         :root {
@@ -357,7 +465,7 @@ while($m = mysqli_fetch_assoc($grafikMTU)){
             </div>
             <div class="col-lg-6">
                 <div class="chart-card">
-                    <h5><i class="fa-solid fa-chart-area text-purple" style="color:var(--accent-purple);"></i> Peremajaan MTU Berjalan</h5>
+                    <h5><i class="fa-solid fa-chart-area text-purple" style="color:var(--accent-purple);"></i> Distribusi Material per ULTG</h5>
                     <div style="position: relative; height:340px; width:100%">
                         <canvas id="chartMTU"></canvas>
                     </div>
@@ -438,6 +546,14 @@ while($m = mysqli_fetch_assoc($grafikMTU)){
     /* ==========================================
        CHART MATERIAL (PREMIUM SMOOTH AREA SPLINE)
     ========================================== */
+
+    console.log(typeof Chart);
+
+const chartMaterialCanvas =
+document.getElementById('chartMaterial');
+
+console.log(chartMaterialCanvas);
+
     const ctx = document.getElementById('chartMaterial').getContext('2d');
     
     const fillGradient = ctx.createLinearGradient(0, 0, 0, 300);
@@ -483,43 +599,63 @@ while($m = mysqli_fetch_assoc($grafikMTU)){
     /* ==========================================
        CHART MTU (PREMIUM GRADIENT BAR)
     ========================================== */
-    const canvasMTU = document.getElementById('chartMTU');
+const canvasMTU = document.getElementById('chartMTU');
 
-if (canvasMTU) {
+if(canvasMTU){
 
     const ctxMTU = canvasMTU.getContext('2d');
 
-    const gradientMTU = ctxMTU.createLinearGradient(0,0,0,400);
-    gradientMTU.addColorStop(0,'#38bdf8');
-    gradientMTU.addColorStop(1,'#2563eb');
-
     new Chart(ctxMTU,{
-    type:'bar',
-    data:{
-        labels: <?= json_encode($labelMTU); ?>,
-        datasets:[{
-            label:'Jumlah MTU',
-            data: <?= json_encode($dataMTU); ?>,
-            backgroundColor: gradientMTU,
-            borderRadius:8,
-            barThickness:35
-        }]
-    },
-    options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        plugins:{
-            legend:{
-                display:false
+        plugins:[ChartDataLabels],
+        type:'bar',
+        data:{
+            labels: <?= json_encode($labelULTG); ?>,
+            datasets:[
+            {
+                label:'Alat Uji',
+                data: <?= json_encode($dataAlatUji); ?>,
+                backgroundColor:'#2563eb'
+            },
+            {
+                label:'Alat Kerja',
+                data: <?= json_encode($dataAlatKerja); ?>,
+                backgroundColor:'#10b981'
+            },
+            {
+                label:'Material',
+                data: <?= json_encode($dataMaterial); ?>,
+                backgroundColor:'#f59e0b'
             }
+            ]
         },
-        scales:{
-            y:{
-                beginAtZero:true
-            }
+
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+
+           plugins:{
+    legend:{
+        display:true,
+        position:'top'
+    },
+    datalabels:{
+        color:'#000',
+        anchor:'end',
+        align:'top',
+        font:{
+            weight:'bold',
+            size:11
         }
     }
-});
+},
+
+            scales:{
+                y:{
+                    beginAtZero:true
+                }
+            }
+        }
+    });
 
 }
 </script>
