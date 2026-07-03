@@ -10,46 +10,103 @@ include "../config/koneksi.php";
 
 $jumlah_import = 0;
 $sukses_import = false;
+$gagal_import  = false; 
+$sukses_hapus  = false;
 
+// 1. AKSI UNTUK MENGHAPUS SEMUA DATA (RESET DATABASE)
+if(isset($_POST['kosongkan_data'])){
+    if(mysqli_query($conn, "TRUNCATE TABLE material_gudang")){
+        $sukses_hapus = true;
+    }
+}
+
+// 2. AKSI IMPORT DATA MATERIAL
 if(isset($_POST['import'])){
     if($_FILES['file']['error'] == 0){
         $file = $_FILES['file']['tmp_name'];
         $handle = fopen($file, "r");
 
-        // Lewati judul & header file CSV
-        fgetcsv($handle, 10000, ",");
-        fgetcsv($handle, 10000, ",");
+        if ($handle !== FALSE) {
+            // Prepared statements database
+            $cek_stmt = $conn->prepare("SELECT id FROM material_gudang WHERE LOWER(nama_material) = LOWER(?) AND LOWER(lokasi_penyimpanan) = LOWER(?) LIMIT 1");
+            $stmt = $conn->prepare("INSERT INTO material_gudang 
+                (nama_material, satuan, jumlah, no_rak, kondisi, lokasi_penyimpanan, keterangan) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-        // Prepared Statement untuk bulk import yang aman dan cepat
-        $stmt = $conn->prepare("INSERT INTO material_gudang 
-            (nama_material, satuan, jumlah, no_rak, kondisi, lokasi_penyimpanan, keterangan) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)");
+            while(($data = fgetcsv($handle, 0, ",")) !== FALSE){
+                // Skip jika baris kosong total
+                if (empty($data) || !isset($data[0]) || trim($data[0]) === '') {
+                    continue;
+                }
 
-        while(($data = fgetcsv($handle, 10000, ",")) !== FALSE){
-            if(count(array_filter($data)) == 0){
-                continue;
+                // Bersihkan spasi kosong di setiap ujung data kolom
+                foreach ($data as $key => $val) {
+                    $data[$key] = trim($val);
+                }
+
+                // Lewati baris nama kolom / header tabel agar tidak masuk database
+                if (strtolower($data[0]) === 'storage location description' || strtolower($data[0]) === 'no') {
+                    continue;
+                }
+
+                // =========================================================================
+                // PENENTUAN JALUR DATA BERDASARKAN HASIL COPIAN FILE CSV ASLI ANDA
+                // =========================================================================
+                if (isset($data[8]) && ($data[8] === 'Fast moving' || $data[8] === 'Slow moving' || $data[8] === 'Jenis Pergerakan')) {
+                    // JALUR 1: FILE material_stok(1).csv 
+                    $nama_material = isset($data[2]) ? $data[2] : '';
+                    $satuan        = isset($data[3]) ? $data[3] : '-';
+                    $raw_jumlah    = isset($data[4]) ? $data[4] : '0';
+                    $no_rak        = '-';
+                    $kondisi       = 'BAIK';
+                    $lokasi        = isset($data[0]) ? $data[0] : 'GUDANG UPT';
+                    $keterangan    = isset($data[5]) ? 'Kategori: ' . $data[5] : '';
+                } 
+                else {
+                    // JALUR 2: FILE material_nonstok.csv
+                    $nama_material = isset($data[1]) ? $data[1] : '';
+                    $satuan        = isset($data[2]) ? $data[2] : '-';
+                    $raw_jumlah    = isset($data[3]) ? $data[3] : '0';
+                    $no_rak        = isset($data[4]) ? $data[4] : '-';
+                    $kondisi       = isset($data[5]) ? $data[5] : '-';
+                    $lokasi        = isset($data[6]) ? $data[6] : '-';
+                    $keterangan    = isset($data[7]) ? $data[7] : '';
+                }
+
+                if (empty($nama_material)) {
+                    continue;
+                }
+
+                // Bersihkan sisa tanda petik dua pembungkus string bawaan CSV
+                $nama_material = trim($nama_material, '"');
+
+                // Ubah format angka pecahan desimal Excel (misal: 4.0) menjadi Integer bulat (4)
+                $jumlah = (int)round((float)$raw_jumlah);
+
+                // Saringan anti-duplikat berdasarkan Nama Material & Lokasi
+                // $cek_stmt->bind_param("ss", $nama_material, $lokasi);
+                $cek_stmt->execute();
+                $cek_stmt->store_result();
+                if($cek_stmt->num_rows > 0){
+                    continue; // Lewati kalau data sudah pernah masuk
+                }
+
+                // Eksekusi Simpan murni ke MySQL
+                $stmt->bind_param("ssissss", $nama_material, $satuan, $jumlah, $no_rak, $kondisi, $lokasi, $keterangan);
+                if($stmt->execute()){
+                    $jumlah_import++;
+                }
             }
 
-            $nama_material = trim($data[1] ?? '');
-            if($nama_material == ''){
-                continue;
-            }
-
-            $satuan     = trim($data[2] ?? '');
-            $jumlah     = (int)($data[3] ?? 0);
-            $no_rak     = trim($data[4] ?? '');
-            $kondisi    = trim($data[5] ?? '');
-            $lokasi     = trim($data[6] ?? '');
-            $keterangan = trim($data[7] ?? '');
-
-            $stmt->bind_param("ssissss", $nama_material, $satuan, $jumlah, $no_rak, $kondisi, $lokasi, $keterangan);
-            $stmt->execute();
-
-            $jumlah_import++;
+            fclose($handle);
+            $cek_stmt->close();
+            $stmt->close();
+            $sukses_import = true;
+        } else {
+            $gagal_import = true;
         }
-        fclose($handle);
-        $stmt->close();
-        $sukses_import = true;
+    } else {
+        $gagal_import = true;
     }
 }
 ?>
@@ -58,344 +115,133 @@ if(isset($_POST['import'])){
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>I-CALM | Import Material</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I-CALM | Manajemen Material Gudang</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
-        :root {
-            --bg-base: #e2e8f0;            
-            --bg-body: #f8fafc;
-            --bg-card: rgba(255, 255, 255, 0.65); 
-            --primary-brand: #0284c7;       
-            --accent-blue: #3b82f6;         
-            --text-main: #1e293b;           
-            --text-muted: #64748b;          
-            --border-glass: rgba(255, 255, 255, 0.7);
+        :root { 
+            --bg-base: #f4f7fc; 
+            --bg-card: #ffffff; 
+            --primary-brand: #0284c7; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+            --border-glass: rgba(148, 163, 184, 0.15); 
+            --bg-sidebar: #d0e1f9; 
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body { 
-            background: radial-gradient(circle at top right, #dbeafe 0%, var(--bg-base) 60%, #e0e7ff 100%);
-            color: var(--text-main);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* ========================================================
-            SIDEBAR NAVIGATION (PERSISTEN)
-        ========================================================= */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 260px;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(15, 32, 67, 0.95) 0%, rgba(9, 53, 122, 0.9) 50%, rgba(2, 132, 199, 0.85) 100%);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 28px;
-            z-index: 1000;
-            box-shadow: 5px 0 30px rgba(9, 53, 122, 0.15); 
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; }
         
-        .sidebar h3 { 
-            font-size: 1.4rem; font-weight: 800; padding: 0 24px; margin-bottom: 35px; color: #ffffff;
-            display: flex; align-items: center;
-        }
-        .sidebar h3 i { color: #38bdf8 !important; text-shadow: 0 0 12px rgba(56, 189, 248, 0.6); }
+        .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100%; background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15); padding: 35px 20px; display: flex; flex-direction: column; }
+        .sidebar h3 { font-size: 1.25rem; font-weight: 800; color: #1e3a8a; margin-bottom: 35px; display: flex; align-items: center; gap: 10px; }
+        .sidebar a, .dropdown-btn { display: flex; align-items: center; justify-content: space-between; color: #1e3a8a; text-decoration: none; padding: 11px 14px; font-size: 0.9rem; font-weight: 700; border: none; background: transparent; width: 100%; cursor: pointer; border-radius: 10px; margin-bottom: 5px; text-align: left; }
+        .sidebar a:hover, .dropdown-btn:hover { background: rgba(255, 255, 255, 0.5); }
+        .sidebar .active-menu { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
         
-        .sidebar a, .dropdown-btn { 
-            display: flex; align-items: center; justify-content: space-between; color: rgba(255, 255, 255, 0.7); 
-            text-decoration: none; padding: 14px 24px; font-size: 0.95rem; font-weight: 600; border: none; background: none; width: 100%; transition: all 0.25s; cursor: pointer;
-        }
-        .sidebar a:hover, .dropdown-btn:hover { background: rgba(255, 255, 255, 0.08); color: #ffffff; }
-
-        .sidebar .active-menu {
-            color: #ffffff !important; 
-            background: linear-gradient(90deg, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0.03) 100%) !important; 
-            border-left: 4px solid #38bdf8; padding-left: 20px;
-        }
-        .sidebar .active-menu i { color: #38bdf8 !important; }
-        .sidebar a i, .dropdown-btn i { margin-right: 12px; font-size: 1.1rem; width: 20px; text-align: center; color: rgba(255, 255, 255, 0.6); }
-        .sidebar a:hover i, .dropdown-btn:hover i { color: #ffffff; }
-        .sidebar .menu-text { flex-grow: 1; }
-        .dropdown-chevron { font-size: 0.8rem !important; transition: transform 0.2s ease; color: rgba(255, 255, 255, 0.5) !important; }
-        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #38bdf8 !important; }
-
-        .dropdown-container { display: none; background: rgba(0, 0, 0, 0.15); padding: 4px 0; }
-        .dropdown-container a { padding: 11px 24px 11px 56px; font-size: 0.85rem; font-weight: 500; color: rgba(255, 255, 255, 0.6); }
-        .dropdown-container a:hover { color: #38bdf8; background: transparent; }
-
-        .sidebar .logout-button {
-            margin-top: 30px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; width: calc(100% - 32px); margin-left: 16px; padding: 12px 16px;
-        }
-        .sidebar .logout-button:hover { background: rgba(239, 68, 68, 0.25) !important; }
-        .sidebar .logout-button i, .sidebar .logout-button .menu-text { color: #fca5a5 !important; }
-
-        /* ========================================================
-            LAYOUT UTAMA & CENTRALIZED CONTAINER
-        ========================================================= */
-        .content { margin-left: 260px; }
+        .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; }
+        .dropdown-container a { padding: 9px 14px; font-size: 0.85rem; background: rgba(255, 255, 255, 0.3); text-decoration: none; display: block; color: #1e3a8a; }
         
-        .navbar-custom { 
-            background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            padding: 18px 32px; border-bottom: 1px solid var(--border-glass); position: sticky; top: 0; z-index: 999;
-        }
-        .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.4rem; letter-spacing: -0.5px;}
-
-        .main-body-wrapper { padding: 40px 32px; }
-
-        /* METRICS MINI CARD */
-        .glass-mini-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-glass);
-            border-radius: 20px; padding: 20px;
-            display: flex; align-items: center; gap: 16px;
-            box-shadow: 0 10px 25px -10px rgba(148, 163, 184, 0.1);
-            height: 100%;
-        }
-        .mini-card-icon {
-            width: 48px; height: 48px; border-radius: 14px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
-        }
-
-        /* CARD PANEL UTAMA (CENTERED STYLING) */
-        .cyber-import-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border-glass);
-            border-radius: 24px; padding: 40px;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 25px 50px -12px rgba(148, 163, 184, 0.2);
-        }
-
-        .cyber-alert-info {
-            background: rgba(2, 132, 199, 0.05);
-            border: 1px solid rgba(2, 132, 199, 0.12);
-            border-radius: 16px; padding: 20px;
-        }
-
-        /* AREA UNGGAH BERKAS (DRAG & DROP ZONE) */
-        .upload-drag-zone {
-            border: 2px dashed rgba(2, 132, 199, 0.25);
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 20px; padding: 50px 30px; text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
-        }
-        .upload-drag-zone:hover {
-            border-color: var(--primary-brand);
-            background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 12px 30px rgba(2, 132, 199, 0.08);
-            transform: translateY(-2px);
-        }
-
-        .file-input-cyber {
-            background: #ffffff !important;
-            border: 1px solid rgba(148, 163, 184, 0.3) !important;
-            color: var(--text-main) !important;
-            border-radius: 12px; padding: 12px; max-width: 450px; margin: 24px auto 0 auto;
-            font-weight: 500; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-        }
-        .file-input-cyber::file-selector-button {
-            background: var(--primary-brand); color: #fff; border: none;
-            padding: 6px 18px; border-radius: 8px; font-weight: 600; margin-right: 12px;
-            transition: 0.2s;
-        }
-        .file-input-cyber::file-selector-button:hover { background: #0369a1; }
-
-        /* BUTTON ACTIONS */
-        .btn-action-submit {
-            background: linear-gradient(135deg, #0284c7, #0369a1);
-            border: none; color: #fff; font-weight: 700;
-            padding: 14px 32px; border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.25);
-            transition: all 0.25s;
-        }
-        .btn-action-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4);
-        }
-        .btn-back-custom {
-            border-radius: 12px; padding: 14px 28px; font-weight: 600;
-            background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-muted);
-            transition: all 0.2s;
-        }
-        .btn-back-custom:hover {
-            background: #f8fafc; color: var(--text-main); border-color: rgba(148, 163, 184, 0.5);
-        }
+        .content { margin-left: 260px; padding: 40px; }
+        .cyber-import-container { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 24px; padding: 40px; box-shadow: 0 25px 50px -12px rgba(148, 163, 184, 0.2); }
+        .upload-drag-zone { border: 2px dashed rgba(2, 132, 199, 0.25); background: rgba(255, 255, 255, 0.4); border-radius: 20px; padding: 40px 30px; text-align: center; }
+        .file-input-cyber { background: #ffffff !important; border: 1px solid rgba(148, 163, 184, 0.3) !important; border-radius: 12px; padding: 12px; max-width: 450px; margin: 24px auto 0 auto; }
+        .btn-action-submit { background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #fff; font-weight: 700; padding: 14px 32px; border-radius: 12px; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h3><i class="fa-solid fa-bolt me-2"></i>I-CALM Panel</h3>
-
-    <a href="../dashboard/index.php">
-        <span><i class="fa-solid fa-chart-pie me-2"></i><span class="menu-text">Dashboard</span></span>
-    </a>
-
-    <button class="dropdown-btn">
-        <span><i class="fa-solid fa-layer-group"></i><span class="menu-text">Monitoring</span></span>
-        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
-    </button>
+    <h3><i class="fa-solid fa-bolt text-primary"></i> I-CALM Panel</h3>
+    <a href="../dashboard/index.php"><span><i class="fa-solid fa-chart-pie me-2"></i>Dashboard</span></a>
+    
+    <button class="dropdown-btn"><span><i class="fa-solid fa-layer-group me-2"></i>Monitoring</span><i class="fa-solid fa-chevron-down"></i></button>
     <div class="dropdown-container">
         <a href="../material/index.php">Material Gudang</a>
         <a href="../ba/index.php">Database BA</a>
     </div>
 
-    <button class="dropdown-btn active">
-        <span><i class="fa-solid fa-file-import"></i><span class="menu-text">Import</span></span>
-        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
-    </button>
+    <button class="dropdown-btn active"><span><i class="fa-solid fa-file-import me-2"></i>Import</span><i class="fa-solid fa-chevron-down"></i></button>
     <div class="dropdown-container" style="display: block;">
-        <a href="../import/material.php" class="active-menu">Import Material</a>
-        <a href="../import/ba.php">Import BA</a>
+        <a href="material.php" class="active-menu">Import Material</a>
+        <a href="ba.php">Import BA</a>
     </div>
 
-    <button class="dropdown-btn">
-        <span><i class="fa-solid fa-file-export"></i><span class="menu-text">Export</span></span>
-        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
-    </button>
-    <div class="dropdown-container">
-        <a href="../export/material_excel.php">Export Material</a>
-        <a href="../export/ba_excel.php">Export BA</a>
-    </div>
-
-    <a href="../login/logout.php" class="logout-button">
-        <span><i class="fa-solid fa-right-from-bracket"></i><span class="menu-text">Logout</span></span>
-    </a>
+    <a href="../login/logout.php" class="mt-auto btn btn-light text-danger fw-bold">Logout</a>
 </div>
 
 <div class="content">
-
-    <nav class="navbar navbar-custom">
-        <div class="container-fluid px-0">
-            <span class="navbar-brand mb-0 h1 d-flex align-items-center">
-                <i class="fa-solid fa-cloud-arrow-up text-primary me-2"></i> UTALITAS IMPOR 
-                <span class="ms-2" style="font-weight: 400; font-size: 0.95rem; color: var(--text-muted);">/ Bulk Import Material</span>
-            </span>
+    <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 p-3" style="border-radius:16px;">
+        <div>
+            <h6 class="fw-bold text-dark mb-1"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>Pembersihan Data Sebelum Upload</h6>
+            <p class="text-muted small mb-0">Disarankan mengosongkan database terlebih dahulu jika ingin memperbarui seluruh isinya agar tidak duplikat.</p>
         </div>
-    </nav>
+        <form method="POST" id="formReset">
+            <button type="submit" name="kosongkan_data" class="btn btn-danger fw-bold px-4" style="border-radius:10px;">
+                <i class="fa-solid fa-trash-can me-2"></i>Kosongkan Semua Data Lama
+            </button>
+        </form>
+    </div>
 
-    <div class="main-body-wrapper container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-xl-9 col-lg-10">
-                
-                <?php
-                $total = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS total FROM material_gudang"));
-                ?>
+    <div class="cyber-import-container">
+        <div class="text-center mb-4">
+            <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-file-csv text-primary me-2"></i>Smart Import Data Material (.CSV)</h4>
+            <p class="text-muted small">Sistem mendeteksi struktur kolom secara otomatis. Mendukung file <b>Material Stok</b> & <b>Non-Stok</b>.</p>
+        </div>
 
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="glass-mini-card">
-                            <div class="mini-card-icon" style="background: rgba(2, 132, 199, 0.1); color: var(--primary-brand);">
-                                <i class="fa-solid fa-cubes"></i>
-                            </div>
-                            <div>
-                                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px;">Total Material Terdaftar</div>
-                                <div style="font-size: 1.35rem; font-weight: 800; color: var(--text-main);"><?= number_format($total['total']); ?> Record</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="glass-mini-card">
-                            <div class="mini-card-icon" style="background: rgba(22, 163, 74, 0.1); color: #16a34a;">
-                                <i class="fa-solid fa-circle-check"></i>
-                            </div>
-                            <div>
-                                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px;">Status Sinkronisasi</div>
-                                <div style="font-size: 1.35rem; font-weight: 800; color: #16a34a;">UPT MAKASSAR READY</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cyber-import-container">
-                    <div class="text-center mb-4">
-                        <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-box-open text-primary me-2"></i>Unggah Log Basis Data</h4>
-                        <p class="text-muted small">Pastikan struktur berkas penampung tabel eksternal sesuai dengan aturan pemetaan parser.</p>
-                    </div>
-
-                    <div class="cyber-alert-info mb-4">
-                        <div class="d-flex gap-2 align-items-center mb-2">
-                            <i class="fa-solid fa-circle-info text-primary"></i>
-                            <strong style="font-size: 0.85rem; letter-spacing: 0.3px; color: #0369a1;">STANDARISASI STRUKTUR PARAMETER CSV:</strong>
-                        </div>
-                        <ul class="mb-0 small text-secondary" style="padding-left: 20px; line-height: 1.6; font-weight: 500;">
-                            <li>Ekstensi berkas wajib bertipe komparasi sekuensial <strong>.CSV (Comma Separated Values)</strong>.</li>
-                            <li>Sistem otomatis melewati baris <span class="text-dark fw-semibold">Judul (Row 1)</span> dan <span class="text-dark fw-semibold">Header Tabel (Row 2)</span> pada template default.</li>
-                            <li>Baris data tanpa nilai pada entitas <span class="text-danger fw-semibold">Nama Material</span> akan diabaikan otomatis demi integritas database.</li>
-                            <li>Eksekusi query menggunakan <em>Prepared Statement</em> untuk menjaga performa transaksi massal yang aman.</li>
-                        </ul>
-                    </div>
-
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="upload-drag-zone mb-4">
-                            <i class="fa-solid fa-cloud-arrow-up fa-3x text-primary mb-3 opacity-75"></i>
-                            <h5 class="fw-bold text-dark mb-1">Pilih Berkas Spreadsheet CSV</h5>
-                            <p class="text-muted small mb-0">Klik tombol di bawah ini untuk mencari lokasi penyimpanan data lokal Anda</p>
-                            
-                            <input type="file" name="file" class="form-control file-input-cyber" accept=".csv" required>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <a href="material.php" class="btn btn-back-custom">
-                                Kembali
-                            </a>
-                            <button type="submit" name="import" class="btn btn-action-submit">
-                                <i class="fa-solid fa-server me-1"></i> Eksekusi Unggahan Data
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
+        <form method="POST" enctype="multipart/form-data">
+            <div class="upload-drag-zone mb-4">
+                <i class="fa-solid fa-square-poll-horizontal fa-3x text-primary mb-3 opacity-75"></i>
+                <h5 class="fw-bold text-dark mb-1">Pilih File CSV Anda</h5>
+                <input type="file" name="file" class="form-control file-input-cyber" accept=".csv" required>
             </div>
-        </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="../material/index.php" class="btn btn-outline-secondary px-4 py-2.5" style="border-radius:12px;">Kembali</a>
+                <button type="submit" name="import" class="btn btn-action-submit">Proses & Simpan Data</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-    // Handler Menu Dropdown Sidebar
-    var dropdown = document.getElementsByClassName("dropdown-btn");
-    for (var i = 0; i < dropdown.length; i++) {
-        dropdown[i].addEventListener("click", function() {
-            this.classList.toggle("active");
-            var dropdownContent = this.nextElementSibling;
-            if (dropdownContent.style.display === "block") {
-                dropdownContent.style.display = "none";
-            } else {
-                dropdownContent.style.display = "block";
-            }
+    document.querySelectorAll('.dropdown-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const container = this.nextElementSibling;
+            container.style.display = container.style.display === "block" ? "none" : "block";
         });
-    }
+    });
 
-    // Elegant SweetAlert Success Trigger
+    document.getElementById('formReset').addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+            title: 'Bersihkan Database?',
+            text: "Seluruh riwayat data material di tabel saat ini akan dihapus total!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Kosongkan!',
+            cancelButtonText: 'Batal'
+        }).then((result) => { if (result.isConfirmed) { this.submit(); } });
+    });
+
+    <?php if($sukses_hapus): ?>
+        Swal.fire({ title: 'Dibersihkan!', text: 'Database saat ini sudah bersih total dan siap menerima data baru.', icon: 'success', confirmButtonColor: '#0284c7' });
+    <?php endif; ?>
+
     <?php if($sukses_import): ?>
         Swal.fire({
-            title: 'Sinkronisasi Sukses!',
-            text: 'Berhasil mengintegrasikan sebanyak <?= $jumlah_import; ?> baris entitas baru ke sistem.',
+            title: 'Import Sukses Sempurna!',
+            text: 'Sebanyak <?= $jumlah_import; ?> data material berhasil disimpan!',
             icon: 'success',
-            background: '#ffffff',
-            color: '#1e293b',
-            confirmButtonColor: '#0284c7',
-            confirmButtonText: 'Buka Log Material'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location = 'material.php';
-            }
-        });
+            confirmButtonColor: '#0284c7'
+        }).then(() => { window.location = '../material/index.php'; });
+    <?php endif; ?>
+
+    <?php if($gagal_import): ?>
+        Swal.fire({ title: 'Gagal Import!', text: 'Periksa kembali format file CSV Anda atau koneksi database.', icon: 'error', confirmButtonColor: '#d33' });
     <?php endif; ?>
 </script>
 </body>

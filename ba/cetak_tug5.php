@@ -61,7 +61,27 @@ if (file_exists($path_logo)) {
     <title>Cetak Form TUG 5 - PLN UPT MAKASSAR</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Arial', sans-serif; font-size: 11px; color: #000; background-color: #fff; }
+        /* Mengatur agar di layar monitor tampil seperti lembaran kertas A4 tengah */
+        body { 
+            font-family: 'Arial', sans-serif; 
+            font-size: 11px; 
+            color: #000; 
+            background-color: #e0e0e0; /* Background luar kertas abu-abu tipis di browser */
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Container Pembungkus Kertas A4 */
+        .kertas-a4 {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
         .kop-text { font-size: 11px; font-weight: bold; line-height: 1.4; }
         .judul-form { font-size: 16px; font-weight: bold; text-decoration: underline; margin-bottom: 2px; }
         
@@ -76,22 +96,53 @@ if (file_exists($path_logo)) {
         .info-header td { padding: 2px 0; border: none !important; font-size: 11px; }
         .tanda-tangan td { border: none !important; text-align: center; font-size: 11px; }
 
+        /* PENGATURAN CETAK PRINTER */
         @media print {
+            @page { 
+                size: A4 portrait; 
+                margin: 0; /* Margin dikontrol penuh oleh .kertas-a4 saat cetak */
+            }
+            
             .no-print { display: none !important; }
-            body { margin: 0.5cm; }
+            
+            body { 
+                background-color: #fff; 
+                padding: 0;
+                margin: 0;
+            }
+
+            .kertas-a4 {
+                width: 210mm;
+                height: 297mm;
+                padding: 15mm;
+                margin: 0;
+                box-shadow: none;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+
+            .table-tug tr { 
+                page-break-inside: avoid; 
+            }
+            
+            /* Memaksa warna background abu-abu th tabel muncul saat di-print */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="container-fluid my-3 no-print text-end">
+<div class="container-fluid mb-3 no-print text-end" style="max-width: 210mm; margin: 0 auto; padding: 0;">
     <button onclick="window.print();" class="btn btn-primary fw-bold px-4">
         🖨️ Langsung Print Dokumen
     </button>
     <a href="detail.php?id=<?= $id; ?>" class="btn btn-secondary fw-bold px-3 ms-2">⬅️ Kembali</a>
 </div>
 
-<div class="container-fluid">
+<div class="kertas-a4">
     <div class="d-flex justify-content-between align-items-start">
         <div class="d-flex align-items-center gap-3">
             <img src="<?= $src_logo; ?>" alt="Logo PLN" class="logo-pln">
