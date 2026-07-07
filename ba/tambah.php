@@ -8,11 +8,21 @@ if(!isset($_SESSION['login'])){
 
 include "../config/koneksi.php";
 
+$error_message = "";
+
 if(isset($_POST['simpan'])){
 
-    $jenis_berita_acara = mysqli_real_escape_string($conn, $_POST['jenis_berita_acara']);
+    // Ambil data dan bersihkan dari SQL Injection / Spasi tak sengaja
+    $jenis_berita_acara = isset($_POST['jenis_berita_acara']) ? strtoupper(trim(mysqli_real_escape_string($conn, $_POST['jenis_berita_acara']))) : "";
     $tanggal            = mysqli_real_escape_string($conn, $_POST['tanggal']);
-    $nama_barang        = mysqli_real_escape_string($conn, $_POST['nama_barang']);
+  $jenis_kategori     = strtoupper(trim(mysqli_real_escape_string($conn, $_POST['jenis_kategori']))); 
+
+// Biarkan semua kategori menggunakan spasi asli (EX BONGKARAN, PRE MEMORY tetap pakai spasi)
+// Hanya ubah NON_STOCK dan NON_PO jika Anda ingin menyelaraskannya dengan data lama
+if ($jenis_kategori === "NON_STOCK") { $jenis_kategori = "NON STOCK"; }
+if ($jenis_kategori === "NON_PO") { $jenis_kategori = "NON PO"; }
+    $kategori_material  = mysqli_real_escape_string($conn, $_POST['kategori_material']);
+    $nama_barang        = trim(mysqli_real_escape_string($conn, $_POST['nama_barang'])); 
     $merk_jenis         = mysqli_real_escape_string($conn, $_POST['merk_jenis']);
     $jenis_barang       = mysqli_real_escape_string($conn, $_POST['jenis_barang']);
     $sumber_barang      = mysqli_real_escape_string($conn, $_POST['sumber_barang']);
@@ -20,51 +30,113 @@ if(isset($_POST['simpan'])){
     $jumlah             = (int)$_POST['jumlah'];
     $no_seri            = mysqli_real_escape_string($conn, $_POST['no_seri']);
     $asal_barang_vendor = mysqli_real_escape_string($conn, $_POST['asal_barang_vendor']);
-    $kategori_material  = mysqli_real_escape_string($conn, $_POST['kategori_material']);
     $tujuan             = mysqli_real_escape_string($conn, $_POST['tujuan']);
     $kondisi_material   = mysqli_real_escape_string($conn, $_POST['kondisi_material']);
     $keterangan         = mysqli_real_escape_string($conn, $_POST['keterangan']);
 
-    mysqli_query($conn, "
-        INSERT INTO database_ba
-        (
-            jenis_berita_acara,
-            tanggal,
-            nama_barang,
-            merk_jenis,
-            jenis_barang,
-            sumber_barang,
-            satuan,
-            jumlah,
-            no_seri,
-            asal_barang_vendor,
-            kategori_material,
-            tujuan,
-            kondisi_material,
-            keterangan
-        )
-        VALUES
-        (
-            '$jenis_berita_acara',
-            '$tanggal',
-            '$nama_barang',
-            '$merk_jenis',
-            '$jenis_barang',
-            '$sumber_barang',
-            '$satuan',
-            '$jumlah',
-            '$no_seri',
-            '$asal_barang_vendor',
-            '$kategori_material',
-            '$tujuan',
-            '$kondisi_material',
-            '$keterangan'
-        )
-    ");
+    // -----------------------------------------------------------------
+    // PROSES VALIDASI & HITUNG ULANG TOTAL (TRANSACTION SAFETY)
+    // -----------------------------------------------------------------
+    
+    // Mulai database transaction untuk menjamin keutuhan data
+    $conn->begin_transaction();
 
-    header("Location: index.php");
-    exit;
+    try {
+        // VALIDASI 1: Pastikan Jenis BA dipilih dengan benar
+        if (empty($jenis_berita_acara) || $jenis_berita_acara == "") {
+            throw new Exception("Silakan pilih Jenis Berita Acara (BA) yang valid terlebih dahulu!");
+        }
+
+        // VALIDASI 2: Pastikan nama barang tidak kosong
+        if (empty($nama_barang)) {
+            throw new Exception("Nama Barang / Deskripsi Teknis wajib diisi!");
+        }
+
+        // [PERBAIKAN 1] Cek data gudang wajib menyertakan JENIS KATEGORI agar tidak salah tumpuk/salah update
+        $cek_gudang = mysqli_query($conn, "
+            SELECT *
+            FROM material_gudang
+            WHERE LOWER(TRIM(nama_material)) = LOWER(TRIM('$nama_barang'))
+              AND LOWER(TRIM(jenis_kategori)) = LOWER(TRIM('$jenis_kategori'))
+        ");
+        $data_gudang = mysqli_fetch_assoc($cek_gudang);
+
+        // STEP 1: Masukkan data log Berita Acara Baru ke database_ba
+        $insert_ba = mysqli_query($conn, "
+            INSERT INTO database_ba
+            (jenis_berita_acara, tanggal, jenis_kategori, kategori_material, nama_barang, merk_jenis, jenis_barang, sumber_barang, satuan, jumlah, no_seri, asal_barang_vendor, tujuan, kondisi_material, keterangan)
+            VALUES
+            ('$jenis_berita_acara', '$tanggal', '$jenis_kategori', '$kategori_material', '$nama_barang', '$merk_jenis', '$jenis_barang', '$sumber_barang', '$satuan', '$jumlah', '$no_seri', '$asal_barang_vendor', '$tujuan', '$kondisi_material', '$keterangan')
+        ");
+
+        if (!$insert_ba) {
+            throw new Exception("Gagal menyimpan log Berita Acara: " . mysqli_error($conn));
+        }
+
+        // STEP 2: RE-CALCULATION ENGINE (Hitung mutasi berdasarkan kombinasi NAMA dan KATEGORI secara konsisten)
+        $query_in = mysqli_query($conn, "
+            SELECT SUM(jumlah) as total FROM database_ba 
+            WHERE LOWER(TRIM(nama_barang)) = LOWER('$nama_barang') 
+              AND UPPER(TRIM(jenis_kategori)) = UPPER('$jenis_kategori')
+              AND (UPPER(TRIM(jenis_berita_acara)) = 'MASUK' OR UPPER(TRIM(jenis_berita_acara)) = 'PENGEMBALIAN')
+        ");
+        $res_in = mysqli_fetch_assoc($query_in);
+        $total_masuk = (int)($res_in['total'] ?? 0);
+
+        $query_out = mysqli_query($conn, "
+            SELECT SUM(jumlah) as total FROM database_ba 
+            WHERE LOWER(TRIM(nama_barang)) = LOWER('$nama_barang') 
+              AND UPPER(TRIM(jenis_kategori)) = UPPER('$jenis_kategori')
+              AND UPPER(TRIM(jenis_berita_acara)) IN ('KELUAR', 'RETURN', 'PERBAIKAN')
+        ");
+        $res_out = mysqli_fetch_assoc($query_out);
+        $total_keluar = (int)($res_out['total'] ?? 0);
+
+        // Rumus stok akhir mutlak untuk kategori terkait
+        $stok_akhir_nyata = $total_masuk - $total_keluar;
+
+        // STEP 3: Daftarkan baru atau Update data di material_gudang
+        if ($data_gudang) {
+            // [PERBAIKAN 2] Update data berdasarkan nama barang DAN jenis kategori secara spesifik
+            $update_gudang = mysqli_query($conn, "
+                UPDATE material_gudang
+                SET
+                    jumlah = '$stok_akhir_nyata',
+                    kondisi = '$kondisi_material',
+                    keterangan = 'Otomatis dari Registrasi BA'
+                WHERE LOWER(TRIM(nama_material)) = LOWER(TRIM('$nama_barang'))
+                  AND LOWER(TRIM(jenis_kategori)) = LOWER(TRIM('$jenis_kategori'))
+            ");
+            if (!$update_gudang) {
+                throw new Exception("Gagal memperbarui kalkulasi stok gudang: " . mysqli_error($conn));
+            }
+        } else {
+            $insert_gudang = mysqli_query($conn, "
+                INSERT INTO material_gudang 
+                (nama_material, jumlah, jenis_kategori, kondisi, keterangan) 
+                VALUES 
+                ('$nama_barang', '$stok_akhir_nyata', '$jenis_kategori', '$kondisi_material', 'Otomatis dari Registrasi BA')
+            ");
+            if (!$insert_gudang) {
+                throw new Exception("Gagal mendaftarkan item baru ke gudang: " . mysqli_error($conn));
+            }
+        }
+
+        // Jika seluruh proses sukses tanpa exception, eksekusi commit data permanen
+        $conn->commit();
+        
+        header("Location: index.php");
+        exit;
+
+    } catch (Exception $e) {
+        // Gagalkan seluruh perubahan jika di tengah jalan ada kegagalan query/validasi
+        $conn->rollback();
+        $error_message = $e->getMessage();
+    }
 }
+
+// Ambil daftar barang untuk Autocomplete Dropdown
+$daftar_material_gudang = mysqli_query($conn, "SELECT nama_material FROM material_gudang ORDER BY nama_material ASC");
 ?>
 
 <!DOCTYPE html>
@@ -80,12 +152,13 @@ if(isset($_POST['simpan'])){
     
     <style>
         :root {
-            --bg-base: #e6eef8;            
-            --bg-card: rgba(255, 255, 255, 0.7); 
+            --bg-base: #f4f7fc;            
+            --bg-card: #ffffff; 
             --primary-brand: #0284c7;       
             --text-main: #0f172a;           
-            --text-muted: #475569;          
-            --border-glass: rgba(255, 255, 255, 0.8);
+            --text-muted: #64748b;          
+            --border-glass: rgba(148, 163, 184, 0.15);
+            --bg-sidebar: #d0e1f9;
         }
 
         * {
@@ -94,116 +167,162 @@ if(isset($_POST['simpan'])){
         }
 
         body { 
-            background: radial-gradient(circle at top right, #dbeafe 0%, var(--bg-base) 50%, #eff6ff 100%);
+            background: var(--bg-base);
             color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
         }
 
-        /* Sidebar Styling */
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
-            background: linear-gradient(135deg, rgba(11, 27, 60, 0.98) 0%, rgba(7, 43, 102, 0.96) 60%, rgba(2, 110, 168, 0.95) 100%);
-            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            border-right: 1px solid rgba(255, 255, 255, 0.08); padding-top: 28px; z-index: 1000;
-            box-shadow: 10px 0 40px rgba(7, 43, 102, 0.15); 
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid rgba(2, 132, 199, 0.15);
+            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column;
         }
-        
         .sidebar h3 { 
-            font-size: 1.35rem; font-weight: 800; padding: 0 24px; margin-bottom: 35px; letter-spacing: -0.5px; color: #ffffff;
-            display: flex; align-items: center; gap: 10px;
+            font-size: 1.25rem; font-weight: 800; color: #1e3a8a; 
+            margin-bottom: 35px; padding-left: 6px; display: flex; align-items: center; gap: 10px;
         }
-        .sidebar h3 i { color: #38bdf8 !important; text-shadow: 0 0 15px rgba(56, 189, 248, 0.7); }
         
         .sidebar a, .dropdown-btn { 
-            display: flex; align-items: center; justify-content: space-between; color: rgba(255, 255, 255, 0.65); 
-            text-decoration: none; padding: 13px 24px; font-size: 0.9rem; font-weight: 600; border: none; background: none; width: 100%; transition: all 0.25s; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between; 
+            color: #1e3a8a; text-decoration: none; padding: 11px 14px; 
+            font-size: 0.9rem; font-weight: 700; border: none; background: transparent; 
+            width: 100%; cursor: pointer; border-radius: 10px; margin-bottom: 5px; 
+            transition: all 0.2s ease-in-out;
         }
-        .sidebar a:hover, .dropdown-btn:hover { background: rgba(255, 255, 255, 0.06); color: #ffffff; }
-
+        
+        .sidebar a:hover, .dropdown-btn:hover { 
+            color: #025a9c; 
+            background: rgba(2, 132, 199, 0.12); 
+            transform: translateX(4px);
+        }
+        
+        .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
+        .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
+        .sidebar a:hover i, .dropdown-btn:hover i.menu-icon { color: #025a9c; }
+        
         .sidebar .active-menu {
             color: #ffffff !important; 
-            background: linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, rgba(56, 189, 248, 0.02) 100%) !important; 
-            border-left: 4px solid #38bdf8; padding-left: 20px;
+            background: #0284c7 !important; 
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+            border-radius: 10px;
+            transform: translateX(4px);
         }
-        .sidebar .active-menu i { color: #38bdf8 !important; }
-        .sidebar a i, .dropdown-btn i { font-size: 1.05rem; width: 22px; text-align: center; color: rgba(255, 255, 255, 0.5); margin-right: 10px;}
+        .sidebar .active-menu i { color: #ffffff !important; }
+
+        .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
+        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
+        .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
+        .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
         
-        .sidebar .menu-text { flex-grow: 1; }
-        .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: rgba(255, 255, 255, 0.4) !important; }
-        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #38bdf8 !important; }
-
-        .dropdown-container { display: none; background: rgba(0, 0, 0, 0.12); padding: 4px 0; }
-        .dropdown-container a { padding: 10px 24px 10px 56px; font-size: 0.85rem; font-weight: 500; color: rgba(255, 255, 255, 0.55); }
-        .dropdown-container a:hover { color: #38bdf8; background: transparent; }
-
-        .sidebar .logout-button {
-            margin-top: 40px; background: rgba(239, 68, 68, 0.08); border-radius: 12px; width: calc(100% - 32px); margin-left: 16px; padding: 12px 16px;
+        .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
+        .dropdown-container a { 
+            padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
         }
-        .sidebar .logout-button:hover { background: rgba(239, 68, 68, 0.2) !important; }
-        .sidebar .logout-button i, .sidebar .logout-button .menu-text { color: #fca5a5 !important; }
+        .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
 
-        /* Content Layout */
+        .sidebar .logout-button { 
+            margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; 
+        }
+        .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
+        .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
+
         .content { margin-left: 260px; background: transparent; }
         
         .navbar-custom { 
-            background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             padding: 18px 32px; border-bottom: 1px solid var(--border-glass); position: sticky; top: 0; z-index: 999;
         }
 
         .main-body-wrapper { padding: 35px 32px; }
 
-        /* Glassmorphism Card Form */
         .glass-form-card {
-            background: var(--bg-card); border: 1px solid var(--border-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px; padding: 35px; box-shadow: 0 15px 35px rgba(148, 163, 184, 0.06);
+            background: var(--bg-card); border: 1px solid var(--border-glass);
+            border-radius: 16px; padding: 35px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         }
 
-        .form-label { font-weight: 700; color: var(--text-main); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .form-label { font-weight: 700; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
         
-        /* Input Premium Styling */
         .form-control, .form-select {
-            background: #ffffff !important; border: 1px solid rgba(148, 163, 184, 0.25) !important;
-            border-radius: 12px; padding: 12px 16px; font-size: 0.95rem; font-weight: 500; color: var(--text-main); transition: all 0.3s;
+            background: #ffffff !important; border: 1px solid rgba(148, 163, 184, 0.4) !important;
+            border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; font-weight: 500; color: var(--text-main); transition: all 0.3s;
         }
         .form-control:focus, .form-select:focus {
-            border-color: var(--primary-brand) !important; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+            border-color: var(--primary-brand) !important; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.1) !important;
         }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h3><i class="fa-solid fa-bolt"></i>I-CALM Panel</h3>
+    <h3><i class="fa-solid fa-bolt text-primary"></i> I-CALM Panel</h3>
     <a href="../dashboard/index.php">
-        <span><i class="fa-solid fa-chart-pie"></i><span class="menu-text">Dashboard</span></span>
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Dashboard</span>
+        </span>
     </a>
+    
     <button class="dropdown-btn active">
-        <span><i class="fa-solid fa-layer-group"></i><span class="menu-text">Monitoring</span></span>
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-layer-group menu-icon"></i>
+            <span>Monitoring</span>
+        </span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container" style="display: block;">
         <a href="../material/index.php">Material Gudang</a>
         <a href="../ba/index.php" class="active-menu">Database BA</a>
     </div>
+
     <button class="dropdown-btn">
-        <span><i class="fa-solid fa-file-import"></i><span class="menu-text">Import</span></span>
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-tags menu-icon"></i>
+            <span>Kategori</span>
+        </span>
+        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
+    </button>
+    <div class="dropdown-container">
+        <a href="../kategori/stok.php">Stok</a>
+        <a href="../kategori/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/pemakaian.php">Pemakaian</a>
+        <a href="../kategori/peminjaman.php">Peminjaman</a>
+    </div>
+
+    <button class="dropdown-btn">
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-file-import menu-icon"></i>
+            <span>Import</span>
+        </span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
     </div>
+
     <button class="dropdown-btn">
-        <span><i class="fa-solid fa-file-export"></i><span class="menu-text">Export</span></span>
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-file-export menu-icon"></i>
+            <span>Export</span>
+        </span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
         <a href="../export/material_excel.php">Export Material</a>
         <a href="../export/ba_excel.php">Export BA</a>
     </div>
+
     <a href="../login/logout.php" class="logout-button">
-        <span><i class="fa-solid fa-right-from-bracket"></i><span class="menu-text">Logout</span></span>
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </span>
     </a>
 </div>
 
@@ -222,12 +341,21 @@ if(isset($_POST['simpan'])){
             <h4 class="fw-extrabold mb-4" style="letter-spacing: -0.5px; font-weight: 800;"><i class="fa-solid fa-pen-to-square text-primary me-2"></i>Form Entry Data Berita Acara</h4>
             <hr class="mb-4 opacity-10">
 
+            <?php if(!empty($error_message)): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert" style="border-radius: 12px;">
+                    <strong><i class="fa-solid fa-triangle-exclamation me-2"></i>Transaksi Gagal/Dibatalkan!</strong><br>
+                    <p class="mt-2 mb-2 bg-dark text-warning p-2 rounded small"><code><?= htmlspecialchars($error_message); ?></code></p>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
             <form method="POST">
                 <div class="row g-4">
                     
                     <div class="col-md-4">
                         <label class="form-label">Jenis Berita Acara (BA)</label>
                         <select name="jenis_berita_acara" class="form-select" required>
+                            <option value="" disabled selected>-- Pilih Jenis BA --</option>
                             <option value="MASUK">MASUK</option>
                             <option value="KELUAR">KELUAR</option>
                             <option value="PENGEMBALIAN">PENGEMBALIAN</option>
@@ -242,10 +370,24 @@ if(isset($_POST['simpan'])){
                     </div>
 
                     <div class="col-md-4">
+                        <label class="form-label">Kategori Kelompok</label>
+                        <select name="jenis_kategori" class="form-select" required>
+                            <option value="STOCK">STOCK</option>
+                            <option value="NON STOCK">NON STOCK</option>
+                            <option value="NON PO">NON PO</option>
+                            <option value="EX BONGKARAN">EX BONGKARAN</option>
+                            <option value="PRE MEMORY">PRE MEMORY</option>
+                            <option value="PEMINJAMAN">PEMINJAMAN</option>
+                            <option value="PEMAKAIAN">PEMAKAIAN</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-12">
                         <label class="form-label">Kategori Material</label>
                         <select name="kategori_material" class="form-select">
                             <option value="">-- Pilih Kategori --</option>
-                            <option value="Material Gardu">Material Gardu</option>
+                            <option value="Material Gardu Induk">Material Gardu Induk</option>
+                            <option value="Material Transmisi">Material Transmisi</option>
                             <option value="Material Proteksi">Material Proteksi</option>
                             <option value="Material Kabel">Material Kabel</option>
                             <option value="Material Trafo">Material Trafo</option>
@@ -257,7 +399,12 @@ if(isset($_POST['simpan'])){
 
                     <div class="col-md-12">
                         <label class="form-label">Nama Barang / Deskripsi Teknis</label>
-                        <input type="text" name="nama_barang" class="form-control" placeholder="Contoh: Kubikel Schneider SM6" required>
+                        <input type="text" name="nama_barang" list="data_barang_gudang" class="form-control" placeholder="Ketik atau pilih nama barang..." required autocomplete="off">
+                        <datalist id="data_barang_gudang">
+                            <?php while($row = mysqli_fetch_assoc($daftar_material_gudang)) : ?>
+                                <option value="<?= htmlspecialchars($row['nama_material']); ?>"></option>
+                            <?php endwhile; ?>
+                        </datalist>
                     </div>
 
                     <div class="col-md-4">
@@ -271,27 +418,27 @@ if(isset($_POST['simpan'])){
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Sumber Barang</label>
+                        <label class="form-label">Sumber Material</label>
                         <input type="text" name="sumber_barang" class="form-control" placeholder="Contoh: Pengadaan Investasi">
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-3">
                         <label class="form-label">Satuan</label>
                         <input type="text" name="satuan" class="form-control" placeholder="Contoh: Unit, Pcs, Meter">
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-3">
                         <label class="form-label">Jumlah / Volume</label>
-                        <input type="number" name="jumlah" class="form-control" placeholder="0" required>
+                        <input type="number" name="jumlah" class="form-control" placeholder="0" min="1" required>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-6">
                         <label class="form-label">Nomor Seri (S/N)</label>
                         <input type="text" name="no_seri" class="form-control" placeholder="Tulis nomor seri pabrikan jika ada">
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Pemasok / Asal Material</label>
+                        <label class="form-label">Pemasok / Vendor</label>
                         <input type="text" name="asal_barang_vendor" class="form-control" placeholder="Contoh: PT. PLN Tarakan">
                     </div>
 
@@ -330,19 +477,19 @@ if(isset($_POST['simpan'])){
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar Dropdown Menu Controller
-    var dropdown = document.getElementsByClassName("dropdown-btn");
-    for (var i = 0; i < dropdown.length; i++) {
-        dropdown[i].addEventListener("click", function() {
-            this.classList.toggle("active");
-            var dropdownContent = this.nextElementSibling;
-            if (dropdownContent.style.display === "block") {
-                dropdownContent.style.display = "none";
+    document.querySelectorAll('.dropdown-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const container = this.nextElementSibling;
+            this.classList.toggle('active');
+            
+            if (window.getComputedStyle(container).display === "block") {
+                container.style.display = "none";
             } else {
-                dropdownContent.style.display = "block";
+                container.style.display = "block";
             }
         });
-    }
+    });
 </script>
 </body>
 </html>
