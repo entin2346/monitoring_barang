@@ -113,9 +113,9 @@ if ($jenis_kategori === "NON_PO") { $jenis_kategori = "NON PO"; }
         } else {
             $insert_gudang = mysqli_query($conn, "
                 INSERT INTO material_gudang 
-                (nama_material, jumlah, jenis_kategori, kondisi, keterangan) 
+                (nama_material, jumlah, jenis_kategori, kondisi, keterangan, sumber_data) 
                 VALUES 
-                ('$nama_barang', '$stok_akhir_nyata', '$jenis_kategori', '$kondisi_material', 'Otomatis dari Registrasi BA')
+                ('$nama_barang', '$stok_akhir_nyata', '$jenis_kategori', '$kondisi_material', 'Otomatis dari Registrasi BA', 'BA')
             ");
             if (!$insert_gudang) {
                 throw new Exception("Gagal mendaftarkan item baru ke gudang: " . mysqli_error($conn));

@@ -106,9 +106,17 @@ $query = mysqli_query($conn, "SELECT * FROM material_gudang WHERE $whereClause O
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../import/material.php">Import Material</a>
-        <a href="../import/ba.php">Import BA</a>
+        <a href="form_material.php">Import Material</a>
+        <a href="form_ba.php">Import BA</a>
+        <a href="form_stok.php">Import Stok</a>
+        <a href="form_non_stok.php" class="active-sub">Import Non Stok</a>
+        <a href="form_non_po.php">Import Non PO</a>
+        <a href="form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="form_pre_memory.php">Import Pre Memory</a>
+        <a href="form_peminjaman.php">Import Peminjaman</a>
+        <a href="form_pemakaian.php">Import Pemakaian</a>
     </div>
+
 
     <button class="dropdown-btn">
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-export menu-icon"></i><span>Export</span></span>

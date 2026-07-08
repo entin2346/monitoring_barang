@@ -12,7 +12,8 @@ $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 // Kunci filter untuk kategori PEMINJAMAN
 $whereClause = "jenis_kategori LIKE '%peminjaman%'";
 if ($cari_clean !== '') {
-    $whereClause .= " AND (nama_material LIKE '%$cari_clean%')";
+    // Mencari berdasarkan nama material atau peminjam
+    $whereClause .= " AND (nama_material LIKE '%$cari_clean%' OR peminjam LIKE '%$cari_clean%')";
 }
 
 $limit = 25;
@@ -62,12 +63,12 @@ $query = mysqli_query($conn, "SELECT * FROM material_gudang WHERE $whereClause O
         .stat-number { font-size: 2rem; font-weight: 800; }
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
         .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
-        .cyber-table-wrapper { border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; }
-        .table-cyber { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .table-cyber th { background: #f8fafc; padding: 16px 22px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border-color); }
-        .table-cyber td { padding: 15px 22px; font-size: 0.88rem; border-bottom: 1px solid var(--border-color); }
-        .badge-kat { padding: 5px 10px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; text-transform: uppercase; }
-        .kat-peminjaman { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; } /* Warna Kuning Oranye */
+        
+        /* Modifikasi tabel agar mendukung multi-row header */
+        .cyber-table-wrapper { border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; background: #fff; }
+        .table-cyber { width: 100%; border-collapse: collapse; }
+        .table-cyber th { background: #f8fafc; padding: 12px 16px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; border: 1px solid #e2e8f0; text-align: center; vertical-align: middle; }
+        .table-cyber td { padding: 12px 16px; font-size: 0.85rem; border: 1px solid #e2e8f0; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -143,7 +144,7 @@ $query = mysqli_query($conn, "SELECT * FROM material_gudang WHERE $whereClause O
                     <div class="col-md-10">
                         <div class="input-group input-cyber-group">
                             <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                            <input type="text" name="cari" class="form-control" placeholder="Cari nama material di kategori Peminjaman..." value="<?= htmlspecialchars($cari_clean); ?>">
+                            <input type="text" name="cari" class="form-control" placeholder="Cari nama material atau peminjam..." value="<?= htmlspecialchars($cari_clean); ?>">
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -157,13 +158,23 @@ $query = mysqli_query($conn, "SELECT * FROM material_gudang WHERE $whereClause O
             <table class="table-cyber">
                 <thead>
                     <tr>
-                        <th width="60" class="text-center">NO</th>
-                        <th>NAMA MATERIAL GUDANG</th>
-                        <th>KATEGORI</th>
-                        <th>SATUAN</th>
-                        <th>JUMLAH PINJAM</th>
-                        <th>NOMOR RAK</th>
-                        <th>KETERANGAN</th>
+                        <th rowspan="2" width="50">NO</th>
+                        <th rowspan="2">MATERIAL</th>
+                        <th rowspan="2">ASAL MATERIAL</th>
+                        <th rowspan="2">TANGGAL PENGAMBILAN</th>
+                        <th rowspan="2">PEMINJAM MATERIAL</th>
+                        <th rowspan="2">JUMLAH</th>
+                        <th rowspan="2">SATUAN</th>
+                        <th colspan="2">PENGEMBALIAN MATERIAL</th>
+                        <th colspan="2">LINK BA</th>
+                        <th rowspan="2">DOKUMENTASI</th>
+                        <th rowspan="2">KETERANGAN</th>
+                    </tr>
+                    <tr>
+                        <th>STATUS</th>
+                        <th>JUMLAH DIKEMBALIKAN</th>
+                        <th>LINK BA PENGAMBILAN MATERIAL</th>
+                        <th>LINK BA PENGEMBALIAN MATERIAL</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -175,13 +186,44 @@ $query = mysqli_query($conn, "SELECT * FROM material_gudang WHERE $whereClause O
                     <tr>
                         <td class="text-center fw-bold"><?= $no++; ?></td>
                         <td class="fw-bold"><?= htmlspecialchars($d['nama_material']); ?></td>
-                        <td><span class="badge-kat kat-peminjaman">Peminjaman</span></td>
+                        <td><?= htmlspecialchars($d['asal_material'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['tanggal'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['peminjam'] ?? '-'); ?></td>
+                        <td><span class="badge bg-warning text-dark px-2 py-1"><?= number_format($d['jumlah']); ?></span></td>
                         <td><?= htmlspecialchars($d['satuan']); ?></td>
-                        <td><span class="badge bg-warning text-dark px-3 py-2"><?= number_format($d['jumlah']); ?></span></td>
-                        <td><?= htmlspecialchars($d['no_rak']); ?></td>
+                        
+                        <td>
+<?php
+$status = strtoupper(trim($d['status_kembali'] ?? ''));
+
+if ($status == 'SUDAH') {
+    echo '<span class="badge bg-success">SUDAH</span>';
+} else {
+    echo '<span class="badge bg-warning text-dark">BELUM</span>';
+}
+?>
+</td>
+                        <td><?= htmlspecialchars($d['jumlah_dikembalikan'] ?? '-'); ?></td>
+                        
+                        <td>
+                            <?php if(!empty($d['link_ba_ambil'])): ?>
+                                <a href="<?= htmlspecialchars($d['link_ba_ambil']); ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-link"></i> BA Ambil</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if(!empty($d['link_ba_kembali'])): ?>
+                                <a href="<?= htmlspecialchars($d['link_ba_kembali']); ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-link"></i> BA Kembali</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
+                        
+                        <td>
+                            <?php if(!empty($d['dokumentasi'])): ?>
+                                <a href="<?= htmlspecialchars($d['dokumentasi']); ?>" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-image"></i> Lihat</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
                         <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
                     </tr>
-                    <?php } } else { echo "<tr><td colspan='6' class='text-center py-4 text-muted'>Data kosong atau tidak ditemukan.</td></tr>"; } ?>
+                    <?php } } else { echo "<tr><td colspan='13' class='text-center py-4 text-muted'>Data kosong atau tidak ditemukan.</td></tr>"; } ?>
                 </tbody>
             </table>
         </div>

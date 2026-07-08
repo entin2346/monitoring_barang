@@ -37,18 +37,26 @@ echo "\xEF\xBB\xBF";
     <thead>
         <tr class="header-tabel">
             <th>No</th>
-            <th>Tanggal</th>
-            <th>Nama Barang</th>
-            <th>Jumlah</th>
+            <th>Tanggal Record</th>
+            <th>Kategori Kelompok</th>
             <th>Tujuan</th>
-            <th>Kondisi</th>
+            <th>Nama Material</th>
+            <th>Merk/Jenis</th>
+            <th>Jenis Material</th>
+            <th>Sumber Material</th>
+            <th>Satuan</th>
+            <th>Jumlah</th>
+            <th>Nomor Seri</th>
+            <th>Pemasok/Vendor</th>
+            <th>Kategori BA</th>
+            <th>Keterangan</th>
         </tr>
     </thead>
     <tbody>
     <?php
     $no = 1;
 
-    // Mengambil data dari database_ba yang nama barangnya tidak kosong
+    // Mengambil data dari database_ba yang nama barangnya tidak kosong (Sesuai query dasar index.php)
     $data = mysqli_query($conn, "
         SELECT *
         FROM database_ba
@@ -56,30 +64,65 @@ echo "\xEF\xBB\xBF";
         ORDER BY tanggal DESC, id DESC
     ");
 
-    if (mysqli_num_rows($data) > 0) {
+    if ($data && mysqli_num_rows($data) > 0) {
         while($d = mysqli_fetch_assoc($data)){
             // Memastikan format tanggal aman saat dibaca di Excel (dd-mm-yyyy)
             $tanggal = (!empty($d['tanggal']) && $d['tanggal'] != '0000-00-00') ? date('d-m-Y', strtotime($d['tanggal'])) : '-';
+            $kategori = strtoupper($d['jenis_berita_acara'] ?? '');
     ?>
         <tr>
             <td align="center"><?= $no++; ?></td>
             
             <td class="format-teks" align="center"><?= $tanggal; ?></td>
             
-            <td class="format-teks"><?= htmlspecialchars($d['nama_barang'], ENT_QUOTES, 'UTF-8'); ?></td>
+            <td class="format-teks"><?= htmlspecialchars(strtoupper($d['jenis_kategori'] ?: '-'), ENT_QUOTES, 'UTF-8'); ?></td>
             
-            <td align="right"><?= number_format($d['jumlah']); ?></td>
+            <td class="format-teks">
+                <?php 
+                if(strpos($kategori, 'MASUK') !== false){
+                    echo "-";
+                } else {
+                    echo htmlspecialchars(strtoupper($d['tujuan'] ?? '-'), ENT_QUOTES, 'UTF-8'); 
+                }
+                ?>
+            </td>
             
-            <td class="format-teks"><?= htmlspecialchars($d['tujuan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            <td class="format-teks"><?= htmlspecialchars($d['nama_barang'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
             
-            <td class="format-teks" align="center"><?= htmlspecialchars($d['kondisi_material'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            <td class="format-teks"><?= htmlspecialchars($d['merk_jenis'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            
+            <td class="format-teks"><?= htmlspecialchars($d['jenis_barang'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            
+            <td class="format-teks"><?= htmlspecialchars($d['sumber_barang'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            
+            <td class="format-teks" align="center"><?= htmlspecialchars($d['satuan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            
+            <td align="right"><?= number_format($d['jumlah'] ?? 0); ?></td>
+            
+            <td class="format-teks"><?= htmlspecialchars($d['no_seri'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            
+            <td class="format-teks"><?= htmlspecialchars($d['asal_barang_vendor'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+            
+            <td class="format-teks" align="center">
+                <?php
+                if(strpos($kategori, 'MASUK') !== false) { 
+                    echo "MASUK"; 
+                } elseif(strpos($kategori, 'KELUAR') !== false || strpos($kategori, 'TERPAKAI') !== false) { 
+                    echo "KELUAR"; 
+                } else { 
+                    echo "RETURN"; 
+                }
+                ?>
+            </td>
+            
+            <td class="format-teks"><?= htmlspecialchars($d['keterangan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
     <?php 
         } 
     } else {
     ?>
         <tr>
-            <td colspan="6" align="center" style="font-weight: bold; padding: 10px;">Data Berita Acara Kosong</td>
+            <td colspan="14" align="center" style="font-weight: bold; padding: 10px;">Data Berita Acara Kosong</td>
         </tr>
     <?php } ?>
     </tbody>

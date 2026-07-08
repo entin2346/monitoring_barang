@@ -11,7 +11,15 @@ $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
 // KUNCI FILTER: Mengambil kategori Stok/Stock, Kecuali yang mengandung 'non', dan WAJIB ID <= 63 (karena ID > 63 adalah Non Stok)
-$whereClause = "(jenis_kategori LIKE '%stok%' OR jenis_kategori LIKE '%stock%') AND jenis_kategori NOT LIKE '%non%' AND id <= 63";
+$whereClause = "
+(
+    id <= 63
+)
+OR
+(
+    id > 467
+    AND UPPER(TRIM(jenis_kategori)) IN ('STOCK','STOK')
+)";
 
 if ($cari_clean !== '') {
     $whereClause .= " AND (nama_material LIKE '%$cari_clean%')";
@@ -284,7 +292,7 @@ if(!$query){
                         <td class="fw-bold"><?= htmlspecialchars($d['nama_material']); ?></td>
                         <td><span class="badge-kat kat-stock">Stok</span></td>
                         <td><span class="small px-2 py-1 rounded fw-semibold" style="background: rgba(0,0,0,0.03); border: 1px solid var(--border-color); color: var(--text-muted);"><?= htmlspecialchars($d['satuan'] ?: '-'); ?></span></td>
-                        <td><span class="neon-badge-stock"><?= number_format($d['jumlah']); ?></span></td>
+                       <td><span class="neon-badge-stock"><?= number_format(abs((int)$d['jumlah'])); ?></span></td>
                         <td style="font-weight: 600;"><i class="fa-solid fa-layer-group text-muted me-2 small"></i><?= htmlspecialchars($d['no_rak'] ?: '-'); ?></td>
                         <td>
                             <?php

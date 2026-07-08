@@ -11,8 +11,15 @@ $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
 // KUNCI FILTER: Diselaraskan dengan logika index.php (Membaca teks kategori ATAU ID > 63)
-$whereClause = "(TRIM(LOWER(jenis_kategori)) = 'non stock' OR TRIM(LOWER(jenis_kategori)) = 'non-stock' OR TRIM(LOWER(jenis_kategori)) = 'non stok' OR TRIM(LOWER(jenis_kategori)) = 'non-stok' OR id > 63)";
-
+$whereClause = "
+(
+    id BETWEEN 64 AND 467
+)
+OR
+(
+    id > 467
+    AND UPPER(TRIM(jenis_kategori)) IN ('NON STOCK','NON STOK','NON-STOCK')
+)";
 if ($cari_clean !== '') {
     $whereClause .= " AND (nama_material LIKE '%$cari_clean%')";
 }

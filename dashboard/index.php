@@ -297,6 +297,13 @@ foreach($ultgList as $ultg){
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
     
     <button class="dropdown-btn">
@@ -440,11 +447,11 @@ foreach($ultgList as $ultg){
     });
 
     /* ==========================================
-        CHART MATERIAL (MENGGUNAKAN MODAL TYPE: BAR AGAR DAPAT BERVARIASI SESUAI TARGET)
+        CHART MATERIAL
     ========================================== */
     const ctx = document.getElementById('chartMaterial').getContext('2d');
     new Chart(ctx, { 
-        type: 'bar', // Diubah ke bar agar sesuai struktur data yang dinamis dan bervariasi
+        type: 'bar',
         data: {
             labels: <?= json_encode($label); ?>,
             datasets: [{

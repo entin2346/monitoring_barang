@@ -42,7 +42,7 @@ if ($kategori_db !== '') {
         if ($kat_cari == 'stok' || $kat_cari == 'stock') {
             // Jika memilih menu Stok, ambil data yang ID <= 63 ATAU yang teksnya memang 'stok'
             $whereConditions[] = "(m.id <= 63 OR TRIM(LOWER(m.jenis_kategori)) = 'stok' OR TRIM(LOWER(m.jenis_kategori)) = 'stock')";
-        } elseif ($kat_cari == 'non stock' || $kat_cari == 'non-stock' || $kat_cari == 'non stok' || $kat_cari == 'non-stok') {
+        } elseif ($kat_cari == 'non stock' || $kat_cari == 'non-stock' || $kat_cari == 'non stok' || $kat_cari == 'non-stok' || $kat_cari == 'non stock') {
             // Jika memilih menu Non Stok, ambil data yang ID > 63 dan BUKAN kategori kustom lain
             $whereConditions[] = "m.id > 63 AND (TRIM(m.jenis_kategori) = '' OR m.jenis_kategori IS NULL OR TRIM(LOWER(m.jenis_kategori)) IN ('stok', 'stock', 'non stok', 'non-stok', 'non stock'))";
         } else {
@@ -95,17 +95,18 @@ if (!$stok_query) {
 $total_stok = mysqli_fetch_assoc($stok_query);
 
 
-/* QUERY UTAMA (Menggunakan sumber_barang dari database_ba) */
+/* QUERY UTAMA (Sudah dikoneksikan dengan kolom satuan dari database_ba) */
 $query = mysqli_query($conn,"
     SELECT 
         m.id AS id,
         m.nama_material,
         m.jenis_kategori AS jenis_kategori,
-        m.satuan,
         m.jumlah AS jumlah,
         m.no_rak,
         m.kondisi,
         m.lokasi_penyimpanan,
+        -- Mengambil satuan dari database_ba, jika kosong/null gunakan bawaan material_gudang
+        COALESCE(NULLIF(TRIM(ba.satuan), ''), m.satuan) AS satuan,
         -- Mengambil sumber_barang dari database_ba, jika kosong/null gunakan bawaan material_gudang
         COALESCE(NULLIF(TRIM(ba.sumber_barang), ''), m.sumber_barang) AS sumber_barang,
         COALESCE(NULLIF(TRIM(ba.keterangan), ''), m.keterangan) AS keterangan
@@ -113,7 +114,8 @@ $query = mysqli_query($conn,"
     LEFT JOIN (
         SELECT 
             TRIM(LOWER(nama_barang)) AS key_nama,
-            MAX(sumber_barang) AS sumber_barang, -- Kolom yang sesuai dengan database_ba Anda
+            MAX(satuan) AS satuan, 
+            MAX(sumber_barang) AS sumber_barang, 
             MAX(keterangan) AS keterangan
         FROM database_ba
         WHERE nama_barang <> '' AND nama_barang IS NOT NULL
@@ -239,12 +241,20 @@ if(!$query){
         .autocomplete-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: var(--text-main); font-size: 0.95rem; text-align: left;}
         .autocomplete-item:hover { background: #bae6fd; color: #0369a1; }
 
-        .cyber-table-wrapper { background: #ffffff !important; border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; }
+        /* PERBAIKAN CSS AGAR TABEL BISA DIGESER SECARA HORIZONTAL */
+        .cyber-table-wrapper { 
+            background: #ffffff !important; 
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        
         .cyber-table-wrapper table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
-        .table-cyber thead th { background: #f8fafc !important; color: #334155 !important; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; padding: 16px 22px; border-bottom: 1px solid var(--border-color); }
+        .table-cyber thead th { background: #f8fafc !important; color: #334155 !important; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; padding: 16px 22px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
         .table-cyber tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border-color); }
         .table-cyber tbody tr:hover td { background: #f8fafc; }
-        .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; }
+        .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; white-space: nowrap; }
 
         .neon-badge-stock { background: rgba(59, 130, 246, 0.06) !important; color: #3b82f6 !important; border: 1px solid rgba(59, 130, 246, 0.1) !important; border-radius: 8px; padding: 5px 12px; font-weight: 700; font-size: 0.8rem; display: inline-block; }
         .badge-status-baik { background: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.2) !important; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
@@ -381,7 +391,7 @@ if(!$query){
             </form>
         </div>
 
-        <div class="cyber-table-wrapper table-responsive mb-4">
+        <div class="cyber-table-wrapper mb-4">
             <table class="table-cyber">
                 <thead>
                     <tr>
@@ -425,18 +435,27 @@ if(!$query){
                             
                             // 3. JIKA di halaman utama / tanpa filter (Global)
                             } else {
-                                // Jika teks kolom kosong atau seputar stok standar, kembalikan ke aturan ID dasar bawaan Anda
-                                if ($kat_real == '' || $kat_real == 'stok' || $kat_real == 'stock' || $kat_real == 'non stok' || $kat_real == 'non-stok' || $kat_real == 'non stock') {
-                                    if ($id_material <= 63) {
-                                        echo '<span class="badge-kat kat-stock">Stok</span>';
+                                if (($d['keterangan'] ?? '') == 'Otomatis dari Registrasi BA') {
+                                    $kat = strtoupper(trim($d['jenis_kategori']));
+                                    if ($kat == 'STOCK' || $kat == 'STOK') {
+                                        echo '<span class="badge-kat kat-stock">STOCK</span>';
+                                    } elseif ($kat == 'NON STOCK' || $kat == 'NON-STOK') {
+                                        echo '<span class="badge-kat kat-nonstock">NON STOCK</span>';
                                     } else {
-                                        echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
+                                        echo '<span class="badge-kat kat-other">'.htmlspecialchars($kat).'</span>';
                                     }
-                                // Jika berisi kategori khusus Anda (Ex Bongkaran, Pre Memory, dll), tampilkan teks aslinya
-                                } else { 
-                                ?>
-                                    <span class="badge-kat kat-other"><?= htmlspecialchars(strtoupper($d['jenis_kategori']), ENT_QUOTES, 'UTF-8'); ?></span>
-                                <?php 
+                                } else {
+                                    if ($kat_real == '' || $kat_real == 'stok' || $kat_real == 'stock' || $kat_real == 'non stok' || $kat_real == 'non-stok' || $kat_real == 'non stock') {
+                                        if ($id_material <= 63) {
+                                            echo '<span class="badge-kat kat-stock">Stok</span>';
+                                        } else {
+                                            echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
+                                        }
+                                    } else {
+                                        echo '<span class="badge-kat kat-other">'
+                                            . htmlspecialchars(strtoupper($d['jenis_kategori']))
+                                            . '</span>';
+                                    }
                                 }
                             }
                             ?>

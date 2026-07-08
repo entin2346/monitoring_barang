@@ -197,7 +197,6 @@ $total_halaman = ceil($total_data / $limit);
         .autocomplete-suggestion-item:hover { background-color: #f1f5f9; color: var(--primary); }
 
         .cyber-table-wrapper { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; width: 100%; overflow-x: auto !important; box-shadow: 0 4px 16px rgba(0,0,0,0.02); }
-        /* Mengubah min-width tabel agar pas dengan kolom baru */
         .table-cyber-clean { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 2000px; }
         .table-cyber-clean thead th { background-color: #f8fafc !important; color: var(--text-muted) !important; font-weight: 700; padding: 16px 20px; font-size: 0.72rem; text-transform: uppercase; border-bottom: 1px solid var(--border-color) !important; }
         .table-cyber-clean tbody tr:hover { background-color: #f8fafc !important; }
@@ -217,6 +216,22 @@ $total_halaman = ceil($total_data / $limit);
 
         .page-link-cyber { background: #fff !important; color: #0f172a !important; border: 1px solid #e2e8f0 !important; padding: 10px 16px; border-radius: 10px; margin: 0 2px; font-weight: 600; }
         .page-item.active .page-link-cyber { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
+
+        /* MODIFIKASI UNTUK SLIDER NAVIGASI NOMOR */
+        .slider-page-container {
+            display: inline-flex;
+            max-width: 260px; /* Batasi lebar container angka agar muat sekitar 4-5 nomor saja */
+            overflow: hidden;
+            scroll-behavior: smooth;
+            vertical-align: middle;
+        }
+        .slider-page-wrapper {
+            display: inline-flex;
+            transition: transform 0.3s ease-in-out;
+        }
+        .page-item-number {
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -459,16 +474,30 @@ $total_halaman = ceil($total_data / $limit);
 
         <?php if($total_halaman > 1) { ?>
         <nav class="pt-2 pb-4">
-            <ul class="pagination justify-content-center">
-                <?php if($page > 1){ ?>
-                    <li class="page-item"><a class="page-link page-link-cyber" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $page-1; ?>"><i class="fa-solid fa-angle-left"></i></a></li>
-                <?php } ?>
-                <?php for($i=1; $i<=$total_halaman; $i++){ if($i == 1 || $i == $total_halaman || ($i >= $page-2 && $i <= $page+2)){ ?>
-                    <li class="page-item <?= ($page == $i) ? 'active' : ''; ?>"><a class="page-link page-link-cyber" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $i; ?>"><?= $i; ?></a></li>
-                <?php } } ?>
-                <?php if($page < $total_halaman){ ?>
-                    <li class="page-item"><a class="page-link page-link-cyber" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $page+1; ?>"><i class="fa-solid fa-angle-right"></i></a></li>
-                <?php } ?>
+            <ul class="pagination justify-content-center align-items-center">
+                
+                <li class="page-item">
+                    <button type="button" class="page-link page-link-cyber" id="btnSliderPrev">
+                        <i class="fa-solid fa-angle-left"></i>
+                    </button>
+                </li>
+
+                <div class="slider-page-container" id="sliderPageContainer">
+                    <div class="slider-page-wrapper">
+                        <?php for($i = 1; $i <= $total_halaman; $i++) { ?>
+                            <li class="page-item page-item-number <?= ($page == $i) ? 'active' : ''; ?>" data-index="<?= $i; ?>">
+                                <a class="page-link page-link-cyber" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $i; ?>"><?= $i; ?></a>
+                            </li>
+                        <?php } ?>
+                    </div>
+                </div>
+
+                <li class="page-item">
+                    <button type="button" class="page-link page-link-cyber" id="btnSliderNext">
+                        <i class="fa-solid fa-angle-right"></i>
+                    </button>
+                </li>
+
             </ul>
         </nav>
         <?php } ?>
@@ -479,6 +508,40 @@ $total_halaman = ceil($total_data / $limit);
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    /* ==========================================================================
+       SCRIPT UNTUK SLIDER NAVIGASI ANGKA PAGINATION
+       ========================================================================== */
+    document.addEventListener("DOMContentLoaded", function() {
+        const container = document.getElementById('sliderPageContainer');
+        const btnPrev = document.getElementById('btnSliderPrev');
+        const btnNext = document.getElementById('btnSliderNext');
+
+        if(container && btnPrev && btnNext) {
+            // Tentukan seberapa jauh pergeseran angka setiap kali tombol panah diklik (dalam pixel)
+            // 52px adalah perkiraan lebar 1 kotak angka beserta margin-nya
+            const scrollAmount = 52 * 3; 
+
+            // Deteksi otomatis posisi scroll agar kotak halaman aktif saat ini langsung berada di area tengah slider saat reload
+            const activeItem = container.querySelector('.page-item-number.active');
+            if(activeItem) {
+                container.scrollLeft = activeItem.offsetLeft - (container.offsetWidth / 2) + (activeItem.offsetWidth / 2);
+            }
+
+            // Aksi tombol geser kiri (<)
+            btnPrev.addEventListener('click', function() {
+                container.scrollLeft -= scrollAmount;
+            });
+
+            // Aksi tombol geser kanan (>)
+            btnNext.addEventListener('click', function() {
+                container.scrollLeft += scrollAmount;
+            });
+        }
+    });
+
+    /* ==========================================================================
+       SIDEBAR & CONFIRMATION ACTION SCRIPT
+       ========================================================================== */
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -510,6 +573,9 @@ $total_halaman = ceil($total_data / $limit);
         });
     });
 
+    /* ==========================================================================
+       AUTOCOMPLETE SEARCH ENGINE SCRIPT
+       ========================================================================== */
     const searchInput = document.getElementById('searchInput');
     const autocompleteBox = document.getElementById('autocompleteBox');
     const searchForm = document.getElementById('searchForm');

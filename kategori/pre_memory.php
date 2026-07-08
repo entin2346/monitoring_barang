@@ -31,28 +31,11 @@ $total_halaman = ceil($total_data / $limit);
 $stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM material_gudang WHERE $whereClause");
 $total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
-// Ambil data dari database dengan pengurutan No Rak khusus
+// Ambil data dari database sesuai urutan baris input asli (berdasarkan id)
 $query = mysqli_query($conn, "
     SELECT * FROM material_gudang 
     WHERE $whereClause 
-    ORDER BY 
-        CASE
-            WHEN no_rak='A1' THEN 1 WHEN no_rak='A2' THEN 2 WHEN no_rak='A3' THEN 3
-            WHEN no_rak='B1' THEN 4 WHEN no_rak='B2' THEN 5 WHEN no_rak='B3' THEN 6 WHEN no_rak='B4' THEN 7
-            WHEN no_rak='C1' THEN 8 WHEN no_rak='C2' THEN 9 WHEN no_rak='C3' THEN 10
-            WHEN no_rak='D1' THEN 11 WHEN no_rak='D2' THEN 12 WHEN no_rak='D3' THEN 13
-            WHEN no_rak='E1' THEN 14 WHEN no_rak='E2' THEN 15 WHEN no_rak='E3' THEN 16
-            WHEN no_rak='F1' THEN 17 WHEN no_rak='F2' THEN 18
-            WHEN no_rak='G1' THEN 19 WHEN no_rak='G2' THEN 20 WHEN no_rak='G3' THEN 21
-            WHEN no_rak='H1' THEN 22 WHEN no_rak='H2' THEN 23 WHEN no_rak='H3' THEN 24
-            WHEN no_rak='I1' THEN 25 WHEN no_rak='I2' THEN 26
-            WHEN no_rak='J1' THEN 27 WHEN no_rak='J2' THEN 28
-            WHEN no_rak='K1' THEN 29 WHEN no_rak='K2' THEN 30 WHEN no_rak='K3' THEN 31
-            WHEN no_rak='M1' THEN 32 WHEN no_rak='M2' THEN 33 WHEN no_rak='M3' THEN 34
-            WHEN no_rak='PETI' THEN 35 WHEN no_rak='RAK ISOLATOR' THEN 36
-            ELSE 999
-        END ASC,
-        nama_material ASC 
+    ORDER BY id ASC 
     LIMIT $offset, $limit
 ");
 
@@ -151,11 +134,6 @@ if(!$query){
         .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; }
 
         .neon-badge-stock { background: rgba(2, 132, 199, 0.06) !important; color: var(--primary) !important; border: 1px solid rgba(2, 132, 199, 0.1) !important; border-radius: 8px; padding: 5px 12px; font-weight: 700; font-size: 0.8rem; display: inline-block; }
-        .badge-status-baik { background: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.2) !important; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
-        .badge-status-other { background: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; border: 1px solid rgba(245, 158, 11, 0.2) !important; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
-        
-        .badge-kat { display: inline-block; padding: 5px 10px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; text-transform: uppercase; }
-        .kat-prememory { background: #e2e8f0; color: #475569; border: 1px solid #cbd5e1; }
     </style>
 </head>
 <body>
@@ -259,14 +237,11 @@ if(!$query){
             <table class="table-cyber">
                 <thead>
                     <tr>
-                        <th width="60" class="text-center">NO</th>
-                        <th>NAMA KELOMPOK MATERIAL GUDANG</th>
-                        <th width="120">KATEGORI</th>
-                        <th width="90">SATUAN</th>
-                        <th width="130">JUMLAH STOK</th>
-                        <th width="120">NOMOR RAK</th>
-                        <th width="130">STATUS KONDISI</th>
-                        <th>LOKASI PENYIMPANAN</th>
+                        <th width="60" class="text-center">No</th>
+                        <th>Material Description</th>
+                        <th width="120">Satuan</th>
+                        <th width="140">Jumlah</th>
+                        <th>Lokasi Penyimpanan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -274,25 +249,40 @@ if(!$query){
                     $no = $offset + 1;
                     if(mysqli_num_rows($query) > 0){
                         while($d = mysqli_fetch_assoc($query)){
+                            // Menyeimbangkan data database dengan urutan tampilan Excel Anda
+                            $satuan_web = $d['satuan'] ?? '-';
+                            $jumlah_web = $d['jumlah'] ?? '0';
+                            $lokasi_web = $d['lokasi_penyimpanan'] ?? '-';
                     ?>
                     <tr>
-                        <td class="text-center fw-bold" style="color: var(--text-muted) !important; font-size:0.85rem;"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
-                        <td class="fw-bold"><?= htmlspecialchars($d['nama_material']); ?></td>
-                        <td><span class="badge-kat kat-prememory">Pre Memory</span></td>
-                        <td><span class="small px-2 py-1 rounded fw-semibold" style="background: rgba(0,0,0,0.03); border: 1px solid var(--border-color); color: var(--text-muted);"><?= htmlspecialchars($d['satuan']); ?></span></td>
-                        <td><span class="neon-badge-stock"><?= number_format(abs((int)$d['jumlah'])); ?></span></td>
-                        <td style="font-weight: 600;"><i class="fa-solid fa-layer-group text-muted me-2 small"></i><?= htmlspecialchars($d['no_rak']); ?></td>
-                        <td>
-                            <?php
-                            if(strtoupper($d['kondisi'] ?? '') == 'BAIK'){ echo "<span class='badge-status-baik'><i class='fa-solid fa-circle-check me-1 small'></i> BAIK</span>"; }
-                            else { echo "<span class='badge-status-other'><i class='fa-solid fa-triangle-exclamation me-1 small'></i> ".htmlspecialchars(strtoupper($d['kondisi'] ?? '-'), ENT_QUOTES, 'UTF-8')."</span>"; }
-                            ?>
+                        <td class="text-center fw-bold" style="color: var(--text-muted) !important; font-size:0.85rem;">
+                            <?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?>
                         </td>
-                        <td><i class="fa-solid fa-map-pin text-danger opacity-70 me-2 small"></i><?= htmlspecialchars($d['lokasi_penyimpanan']); ?></td>
+                        
+                       <td>
+    <div class="fw-bold"><?= htmlspecialchars($d['nama_material']); ?></div>
+</td>
+                        
+                        <td>
+                            <span class="neon-badge-stock">
+                                <?= htmlspecialchars($satuan_web); ?>
+                            </span>
+                        </td>
+                        
+                        <td>
+                            <span class="small px-2 py-1 rounded fw-semibold" style="background: rgba(0,0,0,0.03); border: 1px solid var(--border-color); color: var(--text-main);">
+                                <?= number_format($jumlah_web, 0, ',', '.'); ?> 
+                            </span>
+                        </td>
+                        
+                        <td>
+                            <i class="fa-solid fa-map-pin text-danger opacity-70 me-2 small"></i>
+                            <?= htmlspecialchars($lokasi_web); ?>
+                        </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>
-                        <td colspan="8" class="text-center py-5" style="color: var(--text-muted) !important;">
+                        <td colspan="5" class="text-center py-5" style="color: var(--text-muted) !important;">
                             <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data kosong atau tidak ditemukan.
                         </td>
                     </tr>
@@ -300,6 +290,25 @@ if(!$query){
                 </tbody>
             </table>
         </div>
+
+        <?php if($total_halaman > 1): ?>
+        <nav aria-label="Navigasi Halaman" class="mb-4">
+            <ul class="pagination justify-content-center gap-2">
+                <li class="page-item <?= ($page <= 1) ? 'disabled' : ''; ?>">
+                    <a class="page-link border-0 rounded-3 px-3 py-2 text-dark bg-white shadow-sm" href="?cari=<?= urlencode($cari); ?>&page=<?= $page - 1; ?>"><i class="fa-solid fa-chevron-left"></i></a>
+                </li>
+                <?php for($i = 1; $i <= $total_halaman; $i++): ?>
+                    <li class="page-item <?= ($page == $i) ? 'active' : ''; ?>">
+                        <a class="page-link border-0 rounded-3 px-3 py-2 shadow-sm <?= ($page == $i) ? 'bg-primary text-white font-weight-bold' : 'bg-white text-dark'; ?>" href="?cari=<?= urlencode($cari); ?>&page=<?= $i; ?>"><?= $i; ?></a>
+                    </li>
+                <?php endfor; ?>
+                <li class="page-item <?= ($page >= $total_halaman) ? 'disabled' : ''; ?>">
+                    <a class="page-link border-0 rounded-3 px-3 py-2 text-dark bg-white shadow-sm" href="?cari=<?= urlencode($cari); ?>&page=<?= $page + 1; ?>"><i class="fa-solid fa-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+        <?php endif; ?>
+
     </div>
 </div>
 
