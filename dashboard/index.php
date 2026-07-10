@@ -278,13 +278,13 @@ foreach($ultgList as $ultg){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
     
     <button class="dropdown-btn">

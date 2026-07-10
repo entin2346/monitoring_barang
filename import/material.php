@@ -278,13 +278,13 @@ if(isset($_POST['import'])){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn active">
@@ -297,6 +297,13 @@ if(isset($_POST['import'])){
     <div class="dropdown-container" style="display: block;">
         <a href="material.php" class="active-menu">Import Material</a>
         <a href="ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">

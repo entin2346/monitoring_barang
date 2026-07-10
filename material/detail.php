@@ -38,7 +38,6 @@ if(!$data){
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <style>
-        /* BAGIAN DIUBAH: Mengembalikan variabel penataan warna sidebar agar pas dengan index.php */
         :root { 
             --bg-body: #f4f7fc; 
             --bg-card: #ffffff; 
@@ -56,7 +55,7 @@ if(!$data){
 
         body { background: var(--bg-body); color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         
-        /* BAGIAN DIUBAH: Penyelarasan penuh kelas CSS Sidebar agar identik dengan index.php */
+        /* SIDEBAR PREMIUM SESUAI INDEX */
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
             background-color: var(--bg-sidebar);
@@ -137,9 +136,6 @@ if(!$data){
         .badge-kat { display: inline-block; padding: 5px 12px; font-size: 0.75rem; font-weight: 700; border-radius: 6px; text-transform: uppercase; }
         .kat-stock { background: #e0f2fe; color: #0369a1; }
         .kat-nonstock { background: #fee2e2; color: #b91c1c; }
-        .kat-nonpo { background: #fef3c7; color: #b45309; }
-        .kat-exbongkar { background: #f3e8ff; color: #6b21a8; }
-        .kat-prememory { background: #e2e8f0; color: #475569; }
     </style>
 </head>
 <body>
@@ -173,13 +169,13 @@ if(!$data){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -192,6 +188,13 @@ if(!$data){
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -228,16 +231,15 @@ if(!$data){
                     <div class="col-md-6">
                         <div class="info-item">
                            <div class="info-label">Kategori Kelompok</div>
-<div class="info-value">
-    <?php
-    // Disamakan dengan logika index.php berdasarkan ID barang
-    if ((int)$data['id'] <= 63) {
-        echo '<span class="badge-kat kat-stock">Stok</span>';
-    } else {
-        echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
-    }
-    ?>
-</div>
+                            <div class="info-value">
+                                <?php
+                                if ((int)$data['id'] <= 63) {
+                                    echo '<span class="badge-kat kat-stock">Stok</span>';
+                                } else {
+                                    echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
+                                }
+                                ?>
+                            </div>
                         </div>
                     </div>
 
@@ -377,7 +379,7 @@ if(!$data){
         }
     }
 
-    /* BAGIAN DIUBAH: Fungsi javascript toggle menu yang sinkron penuh dengan index.php */
+    /* JavaScript Toggle Dropdown Sidebar */
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();

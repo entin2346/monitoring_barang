@@ -276,9 +276,7 @@ if(isset($_POST['update'])){
             display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         .file-badge-item i.fa-file { color: #ef4444; }
-        .file-badge-item .btn-remove-file {
-            border: none; background: none; color: #64748b; cursor: pointer; padding: 0; font-size: 0.9rem; line-height: 1;
-        }
+        .file-badge-item .btn-remove-file { border: none; background: none; color: #64748b; cursor: pointer; padding: 0; font-size: 0.9rem; line-height: 1; }
         .file-badge-item .btn-remove-file:hover { color: #ef4444; }
     </style>
 </head>
@@ -303,7 +301,6 @@ if(isset($_POST['update'])){
         <a href="../material/index.php">Material Gudang</a>
         <a href="../ba/index.php" class="active-menu">Database BA</a>
     </div>
-
     <button class="dropdown-btn">
         <span class="menu-content-wrapper">
             <i class="fa-solid fa-tags menu-icon"></i>
@@ -312,15 +309,14 @@ if(isset($_POST['update'])){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
-
     <button class="dropdown-btn">
         <span class="menu-content-wrapper">
             <i class="fa-solid fa-file-import menu-icon"></i>
@@ -331,6 +327,13 @@ if(isset($_POST['update'])){
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
     <button class="dropdown-btn">
         <span class="menu-content-wrapper">
@@ -355,219 +358,176 @@ if(isset($_POST['update'])){
     <nav class="navbar navbar-expand-lg navbar-cyber">
         <div class="container-fluid px-0">
             <span class="navbar-brand mb-0 h1 d-flex align-items-center" style="color: #0f172a; font-weight: 800; font-size: 1.3rem;">
-                <i class="fa-solid fa-pen-to-square text-primary opacity-75 me-2"></i> MODIFIKASI DATA 
-                <span class="ms-2" style="font-weight: 400; font-size: 0.95rem; color: var(--text-muted);">/ Database BA</span>
+                <i class="fa-solid fa-pen-to-square text-primary me-3"></i> Form Ubah Berita Acara
             </span>
-            <div>
-                <a href="detail.php?id=<?= urlencode($id); ?>" class="btn btn-outline-secondary btn-sm px-3 py-2 fw-semibold border-2" style="border-radius: 10px;">
-                    <i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Detail
-                </a>
-            </div>
         </div>
     </nav>
 
     <div class="main-body-wrapper">
         <div class="glass-form-card">
-            
-            <form id="formUpdateBA" method="POST" enctype="multipart/form-data">
-                <div class="row g-4">
+            <form action="" method="POST" enctype="multipart/form-data">
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Jenis Berita Acara</label>
+                        <select name="jenis_berita_acara" class="form-control form-control-cyber-edit" required>
+                            <option value="MASUK" <?= (strtoupper($d['jenis_berita_acara']) == 'MASUK') ? 'selected' : ''; ?>>MASUK</option>
+                            <option value="KELUAR" <?= (strtoupper($d['jenis_berita_acara']) == 'KELUAR') ? 'selected' : ''; ?>>KELUAR</option>
+                            <option value="RETURN" <?= (strtoupper($d['jenis_berita_acara']) == 'RETURN') ? 'selected' : ''; ?>>RETURN</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Tanggal Berita Acara</label>
+                        <input type="date" name="tanggal" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['tanggal']); ?>" required>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Nama Barang / Material</label>
+                        <input type="text" name="nama_barang" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['nama_barang']); ?>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Merk / Jenis</label>
+                        <input type="text" name="merk_jenis" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['merk_jenis']); ?>">
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Jenis Barang (Gudang/Non-Gudang)</label>
+                        <input type="text" name="jenis_barang" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['jenis_barang']); ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Sumber Barang (PO/Non-PO/Dll)</label>
+                        <input type="text" name="sumber_barang" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['sumber_barang']); ?>">
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label form-label-custom">Satuan</label>
+                        <input type="text" name="satuan" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['satuan']); ?>" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-custom">Jumlah Volume</label>
+                        <input type="number" name="jumlah" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['jumlah']); ?>" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-custom">No Seri / SN</label>
+                        <input type="text" name="no_seri" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['no_seri']); ?>">
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Asal Barang / Vendor</label>
+                        <input type="text" name="asal_barang_vendor" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['asal_barang_vendor']); ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Kategori Material</label>
+                        <select name="kategori_material" class="form-control form-control-cyber-edit">
+                            <option value="STOK" <?= (strtoupper($d['kategori_material']) == 'STOK') ? 'selected' : ''; ?>>STOK</option>
+                            <option value="NON STOK" <?= (strtoupper($d['kategori_material']) == 'NON STOK') ? 'selected' : ''; ?>>NON STOK</option>
+                            <option value="NON PO" <?= (strtoupper($d['kategori_material']) == 'NON PO') ? 'selected' : ''; ?>>NON PO</option>
+                            <option value="EX BONGKARAN" <?= (strtoupper($d['kategori_material']) == 'EX BONGKARAN') ? 'selected' : ''; ?>>EX BONGKARAN</option>
+                            <option value="PRE MEMORY" <?= (strtoupper($d['kategori_material']) == 'PRE MEMORY') ? 'selected' : ''; ?>>PRE MEMORY</option>
+                            <option value="PEMINJAMAN" <?= (strtoupper($d['kategori_material']) == 'PEMINJAMAN') ? 'selected' : ''; ?>>PEMINJAMAN</option>
+                            <option value="PEMAKAIAN" <?= (strtoupper($d['kategori_material']) == 'PEMAKAIAN') ? 'selected' : ''; ?>>PEMAKAIAN</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Tujuan / Lokasi Distribusi</label>
+                        <input type="text" name="tujuan" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['tujuan']); ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-custom">Kondisi Material</label>
+                        <input type="text" name="kondisi_material" class="form-control form-control-cyber-edit" value="<?= htmlspecialchars($d['kondisi_material']); ?>">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label form-label-custom">Keterangan Tambahan</label>
+                    <textarea name="keterangan" rows="3" class="form-control form-control-cyber-edit"><?= htmlspecialchars($d['keterangan']); ?></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label form-label-custom d-block">Berkas Lampiran Saat Ini</label>
+                    <?php if(!empty($files_lama)): ?>
+                        <div class="old-file-container" id="oldFilesWrapper">
+                            <?php foreach($files_lama as $idx => $f_old): ?>
+                                <div class="old-file-card" id="old_card_<?= $idx; ?>">
+                                    <i class="fa-solid fa-file-lines text-primary" style="font-size: 1.1rem;"></i>
+                                    <a href="../uploads/<?= htmlspecialchars($f_old); ?>" target="_blank" class="text-decoration-none text-truncate text-secondary" style="font-size: 0.85rem; font-weight: 600; max-width: 140px;" title="<?= htmlspecialchars($f_old); ?>">
+                                        <?= htmlspecialchars($f_old); ?>
+                                    </a>
+                                    <button type="button" class="btn-delete-old-file" onclick="ajaxDeleteFile('<?= htmlspecialchars($id); ?>', '<?= htmlspecialchars($f_old); ?>', <?= $idx; ?>)">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-muted" style="font-size: 0.88rem; font-style: italic;"><i class="fa-solid fa-circle-info me-1"></i> Belum ada file berita acara yang dilampirkan.</p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label form-label-custom">Tambah Berkas Lampiran Baru (Bisa pilih banyak file sekaligus)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0" style="border-radius: 12px 0 0 12px;"><i class="fa-solid fa-cloud-arrow-up text-muted"></i></span>
+                        <input type="text" id="inputFileDummy" class="form-control form-control-cyber-edit border-start-0 bg-white" placeholder="Klik di sini untuk memilih file baru..." style="border-radius: 0 12px 12px 0 !important; cursor: pointer;" readonly>
+                    </div>
+                    <input type="file" id="inputFileReal" name="file_ba[]" class="d-none" multiple>
                     
-                    <div class="col-lg-8">
-                        <div class="row g-3">
-                            
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Jenis Berita Acara</label>
-                                <input type="text" name="jenis_berita_acara" value="<?= htmlspecialchars($d['jenis_berita_acara'] ?? ''); ?>" class="form-control form-control-cyber-edit" required>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Tanggal Dokumen</label>
-                                <input type="date" name="tanggal" value="<?= htmlspecialchars($d['tanggal'] ?? ''); ?>" class="form-control form-control-cyber-edit" required>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label-custom">Nama Barang / Material</label>
-                                <input type="text" name="nama_barang" value="<?= htmlspecialchars($d['nama_barang'] ?? ''); ?>" class="form-control form-control-cyber-edit" required>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Merk / Jenis</label>
-                                <input type="text" name="merk_jenis" value="<?= htmlspecialchars($d['merk_jenis'] ?? ''); ?>" class="form-control form-control-cyber-edit">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Jenis Barang</label>
-                                <input type="text" name="jenis_barang" value="<?= htmlspecialchars($d['jenis_barang'] ?? ''); ?>" class="form-control form-control-cyber-edit">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Sumber Material</label>
-                                <input type="text" name="sumber_barang" value="<?= htmlspecialchars($d['sumber_barang'] ?? ''); ?>" class="form-control form-control-cyber-edit">
-                            </div>
-
-                            <div class="col-md-3">
-                                <label class="form-label-custom">Satuan</label>
-                                <input type="text" name="satuan" value="<?= htmlspecialchars($d['satuan'] ?? ''); ?>" class="form-control form-control-cyber-edit">
-                            </div>
-
-                            <div class="col-md-3">
-                                <label class="form-label-custom">Jumlah Volume</label>
-                                <input type="number" name="jumlah" value="<?= htmlspecialchars($d['jumlah'] ?? 0); ?>" class="form-control form-control-cyber-edit" min="0" required>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Nomor Seri Komponen</label>
-                                <input type="text" name="no_seri" value="<?= htmlspecialchars($d['no_seri'] ?? ''); ?>" class="form-control form-control-cyber-edit" style="font-family: monospace;">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Pemasok / Vendor</label>
-                                <input type="text" name="asal_barang_vendor" value="<?= htmlspecialchars($d['asal_barang_vendor'] ?? ''); ?>" class="form-control form-control-cyber-edit">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Kategori Material</label>
-                                <select name="kategori_material" class="form-select form-control-cyber-edit">
-                                    <?php 
-                                    $kategori_list = ["Material Gardu", "Material Proteksi", "Material Kabel", "Material Trafo", "Alat Kerja", "Alat Uji", "Lainnya"];
-                                    foreach($kategori_list as $kat){
-                                        $selected = (($d['kategori_material'] ?? '') == $kat) ? 'selected' : '';
-                                        echo "<option value='$kat' $selected>$kat</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Kondisi Fisik Material</label>
-                                <select name="kondisi_material" class="form-select form-control-cyber-edit">
-                                    <option value="BAIK" <?= (($d['kondisi_material'] ?? '') == 'BAIK') ? 'selected' : ''; ?>>BAIK</option>
-                                    <option value="RUSAK" <?= (($d['kondisi_material'] ?? '') == 'RUSAK') ? 'selected' : ''; ?>>RUSAK</option>
-                                    <option value="PERBAIKAN" <?= (($d['kondisi_material'] ?? '') == 'PERBAIKAN') ? 'selected' : ''; ?>>PERBAIKAN</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label-custom">Lokasi / Unit Tujuan</label>
-                                <input type="text" name="tujuan" value="<?= htmlspecialchars($d['tujuan'] ?? ''); ?>" class="form-control form-control-cyber-edit">
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label-custom">Keterangan Deskriptif</label>
-                                <textarea name="keterangan" class="form-control form-control-cyber-edit" rows="4"><?= htmlspecialchars($d['keterangan'] ?? ''); ?></textarea>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <div class="col-lg-4">
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label-custom">Berkas Lampiran Saat Ini</label>
-                                <div class="old-file-container">
-                                    <?php 
-                                    if(!empty($files_lama)){ 
-                                        foreach($files_lama as $file_item){ 
-                                            $ext = strtolower(pathinfo($file_item, PATHINFO_EXTENSION));
-                                            $icon_type = "fa-file-pdf text-danger";
-                                            if(in_array($ext, ['jpg','jpeg','png'])) $icon_type = "fa-file-image text-primary";
-                                    ?>
-                                            <div class="old-file-card" id="old-file-<?= md5($file_item); ?>">
-                                                <button type="button" class="btn-delete-old-file" title="Hapus file ini"
-                                                        onclick="hapusFileLamaDariSystem('<?= $d['id']; ?>', '<?= urlencode($file_item); ?>', '<?= md5($file_item); ?>')">
-                                                    <i class="fa-solid fa-xmark"></i>
-                                                </button>
-                                                
-                                                <i class="fa-solid <?= $icon_type; ?> fs-5"></i>
-                                                <span class="text-truncate small fw-semibold" title="<?= htmlspecialchars($file_item); ?>" style="max-width: 130px;">
-                                                    <?= htmlspecialchars($file_item); ?>
-                                                </span>
-                                            </div>
-                                    <?php 
-                                        } 
-                                    } else { 
-                                        echo "<span class='text-muted small italic'>Tidak ada berkas lampiran.</span>";
-                                    } 
-                                    ?>
-                                </div>
-
-                                <label class="form-label-custom">Tambah Lampiran Berkas Baru</label>
-                                <input type="file" id="input_file_ba" class="form-control form-control-cyber-edit" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
-                                <div class="form-text small text-muted mt-1">
-                                    Anda bisa mengklik tombol ini berkali-kali untuk menambah berkas satu per satu.
-                                </div>
-                                
-                                <div id="preview-file-list" class="file-list-container"></div>
-                                
-                                <input type="file" name="file_ba[]" id="real_file_input" multiple style="display: none;">
-                            </div>
-                        </div>
-                    </div>
-
+                    <div class="file-list-container" id="previewContainer"></div>
                 </div>
 
-                <div class="mt-4 pt-4 border-top d-flex gap-2" style="border-color: var(--border-color) !important;">
-                    <button type="submit" name="update" class="btn btn-warning px-4 py-2 fw-bold text-dark" style="border-radius: 12px; background: #fbbf24; border: none; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.25);">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Perubahan
-                    </button>
-                    <a href="detail.php?id=<?= urlencode($id); ?>" class="btn btn-light px-4 py-2 fw-semibold border text-secondary" style="border-radius: 12px; background: #fff;">
-                        Batal
-                    </a>
+                <div class="d-flex justify-content-end gap-2 mt-5">
+                    <a href="detail.php?id=<?= urlencode($id); ?>" class="btn btn-light px-4 py-2" style="border-radius: 10px; font-weight: 600; font-size: 0.9rem;">Batal</a>
+                    <button type="submit" name="update" class="btn btn-primary px-4 py-2" style="border-radius: 10px; font-weight: 600; font-size: 0.9rem; background: var(--primary); border-color: var(--primary);">Simpan Perubahan</button>
                 </div>
+
             </form>
-
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-    function hapusFileLamaDariSystem(idData, namaFile, elementId) {
-        if (confirm("Apakah Anda yakin ingin menghapus berkas lampiran ini secara permanen dari sistem?")) {
-            fetch(`hapus_file_ba.php?id=${idData}&file=${namaFile}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const targetCard = document.getElementById(`old-file-${elementId}`);
-                    if (targetCard) {
-                        targetCard.remove();
-                    }
-                } else {
-                    alert("Gagal menghapus berkas: " + data.message);
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("Terjadi masalah jaringan saat mencoba menghapus file.");
-            });
-        }
-    }
-
-    // TOGGLE SCRIPT JUGA DISESUAIKAN DENGAN STRUKTUR INDEX.PHP
-    document.querySelectorAll('.dropdown-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            const container = this.nextElementSibling;
-            this.classList.toggle('active');
-            
-            if (window.getComputedStyle(container).display === "block") {
-                container.style.display = "none";
+    /* =========================================================================
+       SCRIPT SIDEBAR DROPDOWN (SAMA PERSIS DENGAN INDEX.PHP)
+       ========================================================================= */
+    const dropdownBtns = document.querySelectorAll(".dropdown-btn");
+    dropdownBtns.forEach(btn => {
+        btn.addEventListener("click", function() {
+            this.classList.toggle("active");
+            const dropdownContainer = this.nextElementSibling;
+            if (dropdownContainer.style.display === "block") {
+                dropdownContainer.style.display = "none";
             } else {
-                container.style.display = "block";
+                dropdownContainer.style.display = "block";
             }
         });
     });
 
-    const inputFileDummy = document.getElementById('input_file_ba');
-    const inputFileReal = document.getElementById('real_file_input');
-    const previewContainer = document.getElementById('preview-file-list');
+    /* =========================================================================
+       SCRIPT LIVE MULTIPLE FILE BADGES PREVIEW
+       ========================================================================= */
+    const inputFileDummy = document.getElementById('inputFileDummy');
+    const inputFileReal = document.getElementById('inputFileReal');
+    const previewContainer = document.getElementById('previewContainer');
+    
+    let dtContainer = new DataTransfer();
 
-    const dtContainer = new DataTransfer();
+    inputFileDummy.addEventListener('click', () => inputFileReal.click());
 
-    inputFileDummy.addEventListener('change', function(e) {
-        const filesSelected = e.target.files;
-        if (filesSelected.length === 0) return;
+    inputFileReal.addEventListener('change', function() {
+        const filesSelected = this.files;
+        if(filesSelected.length === 0) return;
 
         for (let i = 0; i < filesSelected.length; i++) {
             const file = filesSelected[i];
@@ -612,7 +572,45 @@ if(isset($_POST['update'])){
         inputFileReal.files = dtContainer.files;
         renderFileBadges();
     }
-</script>
 
+    /* =========================================================================
+       SCRIPT AJAX HAPUS BERKAS LAMA SECARA ASYNCHRONOUS
+       ========================================================================= */
+    function ajaxDeleteFile(idData, fileName, elementIndex) {
+        if (confirm("Apakah Anda yakin ingin menghapus berkas lampiran ini dari server?")) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "hapus_file_ajax.php", true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.status === "success") {
+                            const cardElement = document.getElementById("old_card_" + elementIndex);
+                            if (cardElement) {
+                                cardElement.remove();
+                            }
+                            
+                            const remainingCards = document.querySelectorAll("#oldFilesWrapper .old-file-card");
+                            if (remainingCards.length === 0) {
+                                const wrapper = document.getElementById("oldFilesWrapper");
+                                if (wrapper) {
+                                    wrapper.innerHTML = `<p class="text-muted" style="font-size: 0.88rem; font-style: italic;"><i class="fa-solid fa-circle-info me-1"></i> Belum ada file berita acara yang dilampirkan.</p>`;
+                                }
+                            }
+                        } else {
+                            alert("Gagal menghapus file: " + response.message);
+                        }
+                    } catch (e) {
+                        alert("Terjadi kesalahan sistem saat memproses respon server.");
+                    }
+                }
+            };
+            
+            xhr.send("id=" + encodeURIComponent(idData) + "&filename=" + encodeURIComponent(fileName));
+        }
+    }
+</script>
 </body>
 </html>

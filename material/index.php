@@ -11,6 +11,8 @@ include "../config/koneksi.php";
 // 1. Ambil kata kunci DAN kategori dari URL (Metode GET)
 $cari = $_GET['cari'] ?? '';
 $kategori = $_GET['kategori'] ?? ''; 
+/* --- TAMBAHAN FITUR: AMBIL PARAMETER GUDANG DARI URL --- */
+$gudang_filter = $_GET['gudang'] ?? ''; 
 
 // Gunakan urldecode() agar tanda + atau %2B dikembalikan menjadi spasi asli
 $cari_pencarian = urldecode($cari);
@@ -52,7 +54,27 @@ if ($kategori_db !== '') {
     }
 }
 
-// Gabungkan semua kondisi menjadi klausa WHERE final untuk SQL
+/* --- TAMBAHAN FITUR: QUERY KHUSUS UNTUK HITUNG STATISTIK GLOBAL (Sebelum di-filter klik kotak) --- */
+$whereClauseStats = implode(" AND ", $whereConditions);
+
+$stok_latimojong_query = mysqli_query($conn, "SELECT SUM(m.jumlah) AS total FROM material_gudang m WHERE $whereClauseStats AND (m.lokasi_penyimpanan LIKE '%latimojong%' OR m.lokasi_penyimpanan LIKE '%ltm%')");
+$total_latimojong = mysqli_fetch_assoc($stok_latimojong_query)['total'] ?? 0;
+
+$stok_makassar_query = mysqli_query($conn, "SELECT SUM(m.jumlah) AS total FROM material_gudang m WHERE $whereClauseStats AND (m.lokasi_penyimpanan LIKE '%makassar%' OR m.lokasi_penyimpanan LIKE '%mks%')");
+$total_makassar = mysqli_fetch_assoc($stok_makassar_query)['total'] ?? 0;
+/* --- END STATISTIK GLOBAL --- */
+
+
+/* --- TAMBAHAN FITUR: JIKA KOTAK DIKLIK, TAMBAHKAN KONDISI WHERE PADA TABEL --- */
+if ($gudang_filter === 'latimojong') {
+    $whereConditions[] = "(m.lokasi_penyimpanan LIKE '%latimojong%' OR m.lokasi_penyimpanan LIKE '%ltm%')";
+} elseif ($gudang_filter === 'makassar') {
+    $whereConditions[] = "(m.lokasi_penyimpanan LIKE '%makassar%' OR m.lokasi_penyimpanan LIKE '%mks%')";
+}
+/* --- END FILTER KOTAK --- */
+
+
+// Gabungkan semua kondisi menjadi klausa WHERE final untuk SQL Tabel Utama
 $whereClause = implode(" AND ", $whereConditions);
 
 
@@ -140,7 +162,7 @@ if(!$query){
     <title>I-CALM | Material Gudang Premium</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <style>
@@ -153,6 +175,11 @@ if(!$query){
             --border-color: rgba(148, 163, 184, 0.12); 
             --bg-sidebar: #d0e1f9; 
         }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -225,11 +252,17 @@ if(!$query){
         .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
         .main-body-wrapper { padding: 40px; }
 
-        .glass-stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 26px; }
+        .glass-stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 26px; transition: all 0.2s ease; text-decoration: none; display: block; }
+        .glass-stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); cursor: pointer; }
         .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
         .stat-number { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0; }
+        
+        /* Highlight Aktif jika Kotak diklik */
         .card-blue { border-left: 5px solid #3b82f6; }
         .card-green { border-left: 5px solid #10b981; }
+        .card-orange { border-left: 5px solid #f59e0b; }
+        .card-purple { border-left: 5px solid #8b5cf6; }
+        .card-active { background: #f8fafc; box-shadow: inset 0 0 0 2px var(--primary); }
 
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
         .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
@@ -241,7 +274,6 @@ if(!$query){
         .autocomplete-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: var(--text-main); font-size: 0.95rem; text-align: left;}
         .autocomplete-item:hover { background: #bae6fd; color: #0369a1; }
 
-        /* PERBAIKAN CSS AGAR TABEL BISA DIGESER SECARA HORIZONTAL */
         .cyber-table-wrapper { 
             background: #ffffff !important; 
             border: 1px solid var(--border-color); 
@@ -306,13 +338,13 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -325,6 +357,13 @@ if(!$query){
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -359,25 +398,39 @@ if(!$query){
 
     <div class="main-body-wrapper">
         <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="glass-stat-card card-blue">
-                    <div class="stat-label">Total Klasifikasi Material Filtered</div>
+            <div class="col-xl-3 col-md-6">
+                <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>" class="glass-stat-card card-blue <?= empty($gudang_filter) ? 'card-active' : ''; ?>">
+                    <div class="stat-label">Total Klasifikasi Material</div>
                     <div class="stat-number"><?= number_format($total_data); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Item</span></div>
-                </div>
+                </a>
             </div>
-            <div class="col-md-6">
+            <div class="col-xl-3 col-md-6">
                 <div class="glass-stat-card card-green">
-                    <div class="stat-label">Volume Akumulasi Stok Global</div>
+                    <div class="stat-label">Volume Akumulasi Stok</div>
                     <div class="stat-number" style="color: #10b981;"><?= number_format(abs($total_stok['total'] ?? 0)); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
                 </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=latimojong" class="glass-stat-card card-orange <?= $gudang_filter === 'latimojong' ? 'card-active' : ''; ?>">
+                    <div class="stat-label">Stok Gudang Latimojong</div>
+                    <div class="stat-number" style="color: #f59e0b;"><?= number_format(abs($total_latimojong)); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                </a>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=makassar" class="glass-stat-card card-purple <?= $gudang_filter === 'makassar' ? 'card-active' : ''; ?>">
+                    <div class="stat-label">Stok Gudang Makassar</div>
+                    <div class="stat-number" style="color: #8b5cf6;"><?= number_format(abs($total_makassar)); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                </a>
             </div>
         </div>
 
         <div class="cyber-search-box mb-4">
             <form id="formCari" method="GET">
                 <input type="hidden" name="kategori" id="formKategori" value="<?= htmlspecialchars($kategori_db, ENT_QUOTES, 'UTF-8'); ?>">
+                <input type="hidden" name="gudang" value="<?= htmlspecialchars($gudang_filter, ENT_QUOTES, 'UTF-8'); ?>">
+                
                 <div class="row g-3">
-                    <div class="col-md-10" style="position: relative;">
+                    <div class="col-md-8" style="position: relative;">
                         <div class="input-group input-cyber-group">
                             <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
                             <input type="text" name="cari" id="cari" class="form-control" autocomplete="off" placeholder="Cari nama material..." value="<?= htmlspecialchars($cari_clean, ENT_QUOTES, 'UTF-8'); ?>">
@@ -386,6 +439,11 @@ if(!$query){
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: #3b82f6; border: none; height: 100%;"><i class="fa-solid fa-sliders me-1"></i> Saring</button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: #10b981; border: none; height: 100%; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                            <i class="fa-solid fa-circle-plus me-2"></i>Tambah Material
+                        </a>
                     </div>
                 </div>
             </form>
@@ -497,23 +555,62 @@ if(!$query){
 
         <?php if($total_halaman > 1) { ?>
         <nav class="pb-5">
-            <ul class="pagination justify-content-center">
+            <ul class="pagination justify-content-center align-items-center">
+                
                 <?php if($page > 1){ ?>
-                <li class="page-item"><a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&page=<?= $page-1; ?>"><i class="fa-solid fa-chevron-left"></i></a></li>
-                <?php } ?>
-                <?php for($i=1; $i<=$total_halaman; $i++){ ?>
-                    <li class="page-item <?= ($i==$page)?'active':''; ?>">
-                        <a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&page=<?= $i; ?>"><?= $i; ?></a>
+                    <li class="page-item">
+                        <a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=<?= urlencode($gudang_filter); ?>&page=<?= $page-1; ?>">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </a>
+                    </li>
+                <?php } else { ?>
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fa-solid fa-chevron-left"></i></span>
                     </li>
                 <?php } ?>
+
+                <?php
+                $jumlah_number = 2;
+                $start_number = ($page > $jumlah_number) ? $page - $jumlah_number : 1;
+                $end_number = ($page < ($total_halaman - $jumlah_number)) ? $page + $jumlah_number : $total_halaman;
+
+                if($start_number > 1) {
+                    echo '<li class="page-item"><a class="page-link" href="?cari='.urlencode($cari_clean).'&kategori='.urlencode($kategori_db).'&gudang='.urlencode($gudang_filter).'&page=1">1</a></li>';
+                    if($start_number > 2) {
+                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                    }
+                }
+
+                for($i = $start_number; $i <= $end_number; $i++){
+                    $link_active = ($page == $i) ? 'active' : '';
+                ?>
+                    <li class="page-item <?= $link_active; ?>">
+                        <a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=<?= urlencode($gudang_filter); ?>&page=<?= $i; ?>"><?= $i; ?></a>
+                    </li>
+                <?php 
+                } 
+
+                if($end_number < $total_halaman) {
+                    if($end_number < ($total_halaman - 1)) {
+                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                    }
+                    echo '<li class="page-item"><a class="page-link" href="?cari='.urlencode($cari_clean).'&kategori='.urlencode($kategori_db).'&gudang='.urlencode($gudang_filter).'&page='.$total_halaman.'">'.$total_halaman.'</a></li>';
+                }
+                ?>
+                
                 <?php if($page < $total_halaman){ ?>
-                <li class="page-item"><a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&page=<?= $page+1; ?>"><i class="fa-solid fa-chevron-right"></i></a></li>
+                    <li class="page-item"><a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=<?= urlencode($gudang_filter); ?>&page=<?= $page+1; ?>"><i class="fa-solid fa-chevron-right"></i></a></li>
+                <?php } else { ?>
+                    <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-chevron-right"></i></span></li>
                 <?php } ?>
+
             </ul>
         </nav>
         <?php } ?>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     document.querySelectorAll('.dropdown-btn').forEach(button => {

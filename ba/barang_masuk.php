@@ -77,53 +77,54 @@ if(!$query){
         position: fixed; left: 0; top: 0; width: 260px; height: 100%;
         background-color: var(--bg-sidebar);
         border-right: 1px solid rgba(2, 132, 199, 0.15);
-        padding: 25px 15px; z-index: 1050; display: flex; flex-direction: column;
+        padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column;
     }
     .sidebar h3 { 
-        font-size: 1.2rem; font-weight: 800; color: #1e3a8a; 
-        margin-bottom: 25px; padding-left: 6px; display: flex; align-items: center; gap: 10px;
+        font-size: 1.25rem; font-weight: 800; color: #1e3a8a; 
+        margin-bottom: 35px; padding-left: 6px; display: flex; align-items: center; gap: 10px;
     }
     
     .sidebar a, .dropdown-btn { 
         display: flex; align-items: center; justify-content: space-between; 
-        color: #1e3a8a; text-decoration: none; padding: 9px 12px; 
-        font-size: 0.88rem; font-weight: 700; border: none; background: transparent; 
-        width: 100%; cursor: pointer; border-radius: 8px; margin-bottom: 4px; 
+        color: #1e3a8a; text-decoration: none; padding: 11px 14px; 
+        font-size: 0.9rem; font-weight: 700; border: none; background: transparent; 
+        width: 100%; cursor: pointer; border-radius: 10px; margin-bottom: 5px; 
         transition: all 0.2s ease-in-out;
     }
     
     .sidebar a:hover, .dropdown-btn:hover { 
         color: #025a9c; 
         background: rgba(2, 132, 199, 0.12); 
-        transform: translateX(3px);
+        transform: translateX(4px);
     }
     
-    .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 10px; }
-    .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1rem; width: 20px; text-align: center; color: #1e40af; }
+    .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
+    .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
+    .sidebar a:hover i, .dropdown-btn:hover i.menu-icon { color: #025a9c; }
     
     .sidebar .active-menu {
         color: #ffffff !important; 
         background: #0284c7 !important; 
         font-weight: 700;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
-        border-radius: 8px;
-        transform: translateX(3px);
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+        border-radius: 10px;
+        transform: translateX(4px);
     }
     .sidebar .active-menu i { color: #ffffff !important; }
 
-    .dropdown-chevron { font-size: 0.7rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
+    .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
     .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
-    .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); }
+    .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
     .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
     
-    .dropdown-container { display: none; padding-left: 10px; margin-bottom: 4px; margin-top: 2px; }
+    .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
     .dropdown-container a { 
-        padding: 8px 12px; font-size: 0.83rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
+        padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
     }
     .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
 
     .sidebar .logout-button { 
-        margin-top: auto; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; 
+        margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; 
     }
     .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
     .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
@@ -253,13 +254,13 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -272,6 +273,13 @@ if(!$query){
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
     
     <button class="dropdown-btn">

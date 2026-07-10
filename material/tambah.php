@@ -110,7 +110,7 @@ if(isset($_POST['simpan'])){
             overflow-x: hidden;
         }
 
-        /* SIDEBAR STYLE SESUAI INDEX */
+        /* SIDEBAR STYLE SESUAI DETAIL / INDEX */
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
             background-color: var(--bg-sidebar);
@@ -152,9 +152,8 @@ if(isset($_POST['simpan'])){
 
         .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
         .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
-        .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); border-radius: 10px; }
+        .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
         .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
-        .dropdown-btn.active .dropdown-chevron { color: #ffffff !important; }
         
         .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
         .dropdown-container a { 
@@ -234,6 +233,7 @@ if(isset($_POST['simpan'])){
             <span>Dashboard</span>
         </span>
     </a>
+    
     <button class="dropdown-btn active">
         <span class="menu-content-wrapper">
             <i class="fa-solid fa-layer-group menu-icon"></i>
@@ -254,13 +254,13 @@ if(isset($_POST['simpan'])){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -273,6 +273,13 @@ if(isset($_POST['simpan'])){
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -411,11 +418,13 @@ if(isset($_POST['simpan'])){
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    /* JavaScript Toggle Dropdown Sidebar - SESUAI DETAIL.PHP */
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const container = this.nextElementSibling;
             this.classList.toggle('active');
+            
             if (window.getComputedStyle(container).display === "block") {
                 container.style.display = "none";
             } else {

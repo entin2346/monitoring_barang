@@ -169,29 +169,29 @@ $res_peminjaman = mysqli_fetch_assoc($q_peminjaman);
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn active">
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-excel menu-icon"></i><span>Import</span></span>
         <i class="fa-solid fa-chevron-up dropdown-chevron"></i>
     </button>
-    <div class="dropdown-container" style="display: block;">
-        <a href="form_material.php">Import Material</a>
-        <a href="form_ba.php">Import BA</a>
-        <a href="form_stok.php">Import Stok</a>
-        <a href="form_non_stok.php">Import Non Stok</a>
-        <a href="form_non_po.php">Import Non PO</a>
-        <a href="form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="form_pre_memory.php">Import Pre Memory</a>
-        <a href="form_peminjaman.php" class="active-sub">Import Peminjaman</a>
-        <a href="form_pemakaian.php">Import Pemakaian</a>
+     <div class="dropdown-container" style="display: block;">
+        <a href="../import/material.php">Import Material</a>
+        <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php" class="active-menu">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <a href="../login/logout.php" class="logout-button"><span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span></a>

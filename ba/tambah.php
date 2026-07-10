@@ -15,12 +15,12 @@ if(isset($_POST['simpan'])){
     // Ambil data dan bersihkan dari SQL Injection / Spasi tak sengaja
     $jenis_berita_acara = isset($_POST['jenis_berita_acara']) ? strtoupper(trim(mysqli_real_escape_string($conn, $_POST['jenis_berita_acara']))) : "";
     $tanggal            = mysqli_real_escape_string($conn, $_POST['tanggal']);
-  $jenis_kategori     = strtoupper(trim(mysqli_real_escape_string($conn, $_POST['jenis_kategori']))); 
+    $jenis_kategori     = strtoupper(trim(mysqli_real_escape_string($conn, $_POST['jenis_kategori']))); 
 
-// Biarkan semua kategori menggunakan spasi asli (EX BONGKARAN, PRE MEMORY tetap pakai spasi)
-// Hanya ubah NON_STOCK dan NON_PO jika Anda ingin menyelaraskannya dengan data lama
-if ($jenis_kategori === "NON_STOCK") { $jenis_kategori = "NON STOCK"; }
-if ($jenis_kategori === "NON_PO") { $jenis_kategori = "NON PO"; }
+    // Biarkan semua kategori menggunakan spasi asli (EX BONGKARAN, PRE MEMORY tetap pakai spasi)
+    // Hanya ubah NON_STOCK dan NON_PO jika Anda ingin menyelaraskannya dengan data lama
+    if ($jenis_kategori === "NON_STOCK") { $jenis_kategori = "NON STOCK"; }
+    if ($jenis_kategori === "NON_PO") { $jenis_kategori = "NON PO"; }
     $kategori_material  = mysqli_real_escape_string($conn, $_POST['kategori_material']);
     $nama_barang        = trim(mysqli_real_escape_string($conn, $_POST['nama_barang'])); 
     $merk_jenis         = mysqli_real_escape_string($conn, $_POST['merk_jenis']);
@@ -264,7 +264,6 @@ $daftar_material_gudang = mysqli_query($conn, "SELECT nama_material FROM materia
             <span>Dashboard</span>
         </span>
     </a>
-    
     <button class="dropdown-btn active">
         <span class="menu-content-wrapper">
             <i class="fa-solid fa-layer-group menu-icon"></i>
@@ -285,13 +284,13 @@ $daftar_material_gudang = mysqli_query($conn, "SELECT nama_material FROM materia
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/stok/stok.php">Stok</a>
+        <a href="../kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="../kategori/non_po/non_po.php">Non PO</a>
+        <a href="../kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="../kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="../kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -304,8 +303,15 @@ $daftar_material_gudang = mysqli_query($conn, "SELECT nama_material FROM materia
     <div class="dropdown-container">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
+        <a href="../import/form_stok.php">Import Stok</a>
+        <a href="../import/form_non_stok.php">Import Non Stok</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
+        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
-
+    
     <button class="dropdown-btn">
         <span class="menu-content-wrapper">
             <i class="fa-solid fa-file-export menu-icon"></i>
@@ -317,7 +323,6 @@ $daftar_material_gudang = mysqli_query($conn, "SELECT nama_material FROM materia
         <a href="../export/material_excel.php">Export Material</a>
         <a href="../export/ba_excel.php">Export BA</a>
     </div>
-
     <a href="../login/logout.php" class="logout-button">
         <span class="menu-content-wrapper">
             <i class="fa-solid fa-right-from-bracket"></i>
