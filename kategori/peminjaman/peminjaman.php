@@ -1,160 +1,128 @@
 <?php
 session_start();
 if(!isset($_SESSION['login'])){
-    // PERBAIKAN: Naik 2 tingkat ke folder login
-    header("Location: ../../login/index.php");
+    header("Location: ../login/index.php");
     exit;
 }
-// PERBAIKAN: Naik 2 tingkat untuk mengambil file koneksi database
 include "../../config/koneksi.php";
 
-// Ambil parameter pencarian dan bersihkan bug '+' dari URL
 $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
 // Kunci filter untuk kategori PEMINJAMAN
-$whereClause = "jenis_kategori LIKE '%peminjaman%'";
-if ($cari_clean !== '') {
-    // Mencari berdasarkan nama material atau peminjam
-    $whereClause .= " AND (nama_material LIKE '%$cari_clean%' OR peminjam LIKE '%$cari_clean%')";
+$whereClause = "1=1";
+
+if ($cari_clean != '') {
+    $whereClause .= " AND (
+        nama_material LIKE '%$cari_clean%'
+        OR peminjam LIKE '%$cari_clean%'
+    )";
 }
 
-// Fitur Mutasi Halaman (Pagination) sesuai dengan non_po.php
 $limit = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-if($page < 1){ $page = 1; }
+if($page < 1){
+    $page = 1;
+}
+
 $offset = ($page - 1) * $limit;
 
-// Hitung total item hasil filter
-$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM material_gudang WHERE $whereClause");
-$total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
-$total_halaman = ceil($total_data / $limit);
+$total_query = mysqli_query($conn,"
+SELECT COUNT(*) AS total
+FROM peminjaman
+WHERE $whereClause
+");
 
-// Hitung total volume peminjam
-$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM material_gudang WHERE $whereClause");
-$total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
+$total_data = mysqli_fetch_assoc($total_query)['total'];
 
-// Ambil data dari database dengan pembatasan halaman
-$query = mysqli_query($conn, "
-    SELECT * FROM material_gudang 
-    WHERE $whereClause 
-    ORDER BY tanggal DESC, nama_material ASC
-    LIMIT $offset, $limit
+$total_halaman = ceil($total_data/$limit);
+
+$stok_query = mysqli_query($conn,"
+SELECT SUM(jumlah) AS total
+FROM peminjaman
+WHERE $whereClause
+");
+
+$total_stok = mysqli_fetch_assoc($stok_query)['total'];
+
+$query = mysqli_query($conn,"
+SELECT *
+FROM peminjaman
+WHERE $whereClause
+ORDER BY nama_material ASC
+LIMIT $offset,$limit
 ");
 
 if(!$query){
     die(mysqli_error($conn));
 }
-?>
 
+if(!$query){
+    die("Query Gagal: " . mysqli_error($conn));
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>I-CALM | Kategori Peminjaman</title>
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
     <style>
-        :root {
-            --bg-body: #f4f7fc;
-            --bg-card: #ffffff; 
-            --primary: #0284c7;       
-            --text-main: #0f172a;           
-            --text-muted: #64748b;          
-            --border-color: rgba(148, 163, 184, 0.12);
-            --bg-sidebar: #d0e1f9; 
-        }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
+        :root { --bg-body: #f4f7fc; --bg-card: #ffffff; --primary: #0284c7; --text-main: #0f172a; --text-muted: #64748b; --border-color: rgba(148, 163, 184, 0.12); --bg-sidebar: #d0e1f9; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
-
-        /* SIDEBAR STYLE */
-        .sidebar {
-            position: fixed; left: 0; top: 0; width: 260px; height: 100%;
-            background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15);
-            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column; overflow-y: auto;
-        }
-        .sidebar h3 { 
-            font-size: 1.25rem; font-weight: 800; color: #1e3a8a; 
-            margin-bottom: 35px; padding-left: 6px; display: flex; align-items: center; gap: 10px;
-        }
-        
-        .sidebar a, .dropdown-btn { 
-            display: flex; align-items: center; justify-content: space-between; 
-            color: #1e3a8a; text-decoration: none; padding: 11px 14px; 
-            font-size: 0.9rem; font-weight: 700; border: none; background: transparent; 
-            width: 100%; cursor: pointer; border-radius: 10px; margin-bottom: 5px; 
-            transition: all 0.2s ease-in-out;
-        }
-        
-        .sidebar a:hover, .dropdown-btn:hover { 
-            color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px);
-        }
-        
+        .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100%; background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15); padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar h3 { font-size: 1.25rem; font-weight: 800; color: #1e3a8a; margin-bottom: 35px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .sidebar a, .dropdown-btn { display: flex; align-items: center; justify-content: space-between; color: #1e3a8a; text-decoration: none; padding: 11px 14px; font-size: 0.9rem; font-weight: 700; border: none; background: transparent; width: 100%; cursor: pointer; border-radius: 10px; margin-bottom: 5px; transition: all 0.2s; }
+        .sidebar a:hover, .dropdown-btn:hover { color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px); }
         .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
         .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
-        .sidebar a:hover i, .dropdown-btn:hover i.menu-icon { color: #025a9c; }
         
-        .sidebar .active-menu {
-            color: #ffffff !important; background: #0284c7 !important; font-weight: 700;
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); border-radius: 10px; transform: translateX(4px);
+        .dropdown-container .active-menu { 
+            color: #ffffff !important; 
+            background: #0284c7 !important; 
+            font-weight: 700; 
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); 
+            border-radius: 10px; 
         }
-        .sidebar .active-menu i { color: #ffffff !important; }
-
+        .dropdown-container .active-menu i { 
+            color: #ffffff !important; 
+        }
+        
         .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
         .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
         .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
         .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
         
         .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
-        .dropdown-container a { 
-            padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
-        }
+        .dropdown-container a { padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.2); border-radius: 8px; margin-bottom: 3px; }
         .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
-
-        .sidebar .logout-button { margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; }
+        .sidebar .logout-button { margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; flex-shrink: 0; }
         .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
-        .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
-
-        .content { margin-left: 260px; position: relative; }
+        .content { margin-left: 260px; position: relative; width: calc(100% - 260px); }
         .navbar-custom { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
         .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
         .main-body-wrapper { padding: 40px; }
-
         .glass-stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 26px; border-left: 5px solid var(--primary); }
-        .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
-        .stat-number { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0; }
-
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); }
+        .stat-number { font-size: 2rem; font-weight: 800; }
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
         .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
-        .input-cyber-group input { background: transparent !important; border: none !important; color: var(--text-main) !important; padding: 12px 18px; }
-        .input-cyber-group .input-group-text { background: transparent; border: none; color: #64748b; padding-left: 18px; }
-
-        .cyber-table-wrapper { border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; }
-        .table-cyber { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
-        .table-cyber thead th { background: #f8fafc !important; color: #334155 !important; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; padding: 16px 22px; border-bottom: 1px solid var(--border-color); }
-        .table-cyber tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border-color); }
-        .table-cyber tbody tr:hover td { background: #f8fafc; }
-        .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; }
-
-        .neon-badge-stock { background: rgba(2, 132, 199, 0.06) !important; color: var(--primary) !important; border: 1px solid rgba(2, 132, 199, 0.1) !important; border-radius: 8px; padding: 5px 12px; font-weight: 700; font-size: 0.8rem; display: inline-block; }
+        
+        .cyber-table-wrapper { border: 1px solid var(--border-color); border-radius: 16px; overflow-x: auto; background: #fff; width: 100%; display: block; }
+        .table-cyber { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; white-space: nowrap; }
+        .table-cyber th { background: #f8fafc; padding: 12px 16px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; border: 1px solid #e2e8f0; text-align: center; vertical-align: middle; }
+        .table-cyber td { padding: 12px 16px; font-size: 0.85rem; border: 1px solid #e2e8f0; vertical-align: middle; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h3><i class="fa-solid fa-bolt text-primary"></i> I-CALM Panel</h3>
-    
-    <a href="../../dashboard/index.php">
+    <a href="/monitoring_barang/dashboard/index.php">
         <span class="menu-content-wrapper"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></span>
     </a>
     
@@ -163,22 +131,22 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../../material/index.php">Material Gudang</a>
-        <a href="../../ba/index.php">Database BA</a>
+        <a href="/monitoring_barang/material/index.php">Material Gudang</a>
+        <a href="/monitoring_barang/ba/index.php">Database BA</a>
     </div>
 
-    <button class="dropdown-btn active">
+   <button class="dropdown-btn active">
         <span class="menu-content-wrapper"><i class="fa-solid fa-tags menu-icon"></i><span>Kategori</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container" style="display: block;">
-        <a href="../stok/stok.php">Stok</a>
-        <a href="../non_stok/non_stok.php">Non Stok</a>
-        <a href="../non_po/non_po.php">Non PO</a>
-        <a href="../ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../pre_memory/pre_memory.php">Pre Memory</a>
-        <a href="peminjaman.php" class="active-menu">Peminjaman</a>
-        <a href="../pemakaian/pemakaian.php">Pemakaian</a>
+        <a href="/monitoring_barang/kategori/stok/stok.php">Stok</a>
+        <a href="/monitoring_barang/kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="/monitoring_barang/kategori/non_po/non_po.php">Non PO</a>
+        <a href="/monitoring_barang/kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="/monitoring_barang/kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="/monitoring_barang/kategori/peminjaman/peminjaman.php" class="active-menu">Peminjaman</a>
+        <a href="/monitoring_barang/kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -186,15 +154,15 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../../import/material.php">Import Material</a>
-        <a href="../../import/ba.php">Import BA</a>
-        <a href="../../import/form_stok.php">Import Stok</a>
-        <a href="../../import/form_non_stok.php">Import Non Stok</a>
-        <a href="../../import/form_non_po.php">Import Non PO</a>
-        <a href="../../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="../../import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="../../import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="../../import/form_pemakaian.php">Import Pemakaian</a>
+        <a href="/monitoring_barang/import/material.php">Import Material</a>
+        <a href="/monitoring_barang/import/ba.php">Import BA</a>
+        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
+        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
+        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
+        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -202,11 +170,11 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../../export/material_excel.php">Export Material</a>
-        <a href="../../export/ba_excel.php">Export BA</a>
+        <a href="/monitoring_barang/export/material_excel.php">Export Material</a>
+        <a href="/monitoring_barang/export/ba_excel.php">Export BA</a>
     </div>
     
-    <a href="../../login/logout.php" class="logout-button">
+    <a href="/monitoring_barang/login/logout.php" class="logout-button">
         <span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span>
     </a>
 </div>
@@ -225,47 +193,59 @@ if(!$query){
         <div class="row g-3 mb-4">
             <div class="col-md-6">
                 <div class="glass-stat-card">
-                    <div class="stat-label">Total Jenis Material Dipinjam</div>
-                    <div class="stat-number"><?= number_format($total_data); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Item</span></div>
+                    <div class="stat-label">Total Item</div>
+                    <div class="stat-number"><?= number_format((float)$total_data); ?></div>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="glass-stat-card" style="border-left-color: #10b981;">
-                    <div class="stat-label">Volume Akumulasi Fisik</div>
-                    <div class="stat-number" style="color: #10b981;"><?= number_format($total_stok); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                <div class="glass-stat-card" style="border-left-color: #f59e0b;">
+                    <div class="stat-label">Total Volume Peminjaman</div>
+                    <div class="stat-number" style="color: #f59e0b;"><?= number_format((float)$total_stok); ?></div>
                 </div>
             </div>
         </div>
 
-        <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center">
-            <form method="GET" class="w-70 me-3" style="flex: 1;">
-                <div class="input-group input-cyber-group">
-                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" name="cari" class="form-control" autocomplete="off" placeholder="Cari material atau nama peminjam..." value="<?= htmlspecialchars($cari_clean); ?>">
-                    <button type="submit" class="btn btn-primary px-4 fw-bold">Saring</button>
+        <div class="cyber-search-box mb-4">
+            <form method="GET">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="input-group input-cyber-group">
+                            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" name="cari" class="form-control" placeholder="Cari nama material atau peminjam..." value="<?= htmlspecialchars($cari_clean); ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height:100%;">Saring</button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none; height:100%;"><i class="fa-solid fa-plus me-1"></i> Tambah</a>
+                    </div>
                 </div>
             </form>
-            <a href="tambah.php" class="btn btn-success fw-bold py-2 px-4" style="border-radius:12px;"><i class="fa-solid fa-plus me-2"></i>Tambah Data</a>
         </div>
 
         <div class="cyber-table-wrapper table-responsive mb-4">
             <table class="table-cyber">
                 <thead>
                     <tr>
-                        <th>NO</th>
-                        <th>AKSI</th>
-                        <th>JENIS BA</th>
-                        <th>TANGGAL</th>
-                        <th>NAMA BARANG</th>
-                        <th>MERK/JENIS</th>
-                        <th>JENIS BARANG</th>
-                        <th>SUMBER BARANG</th>
-                        <th>SATUAN</th>
-                        <th>JUMLAH</th>
-                        <th>TUJUAN</th>
-                        <th>KONDISI</th>
-                        <th>VENDOR</th>
-                        <th>BERITA ACARA</th>
+                        <th rowspan="2" width="50">NO</th>
+                        <th rowspan="2">MATERIAL</th>
+                        <th rowspan="2">ASAL MATERIAL</th>
+                        <th rowspan="2">TANGGAL PENGAMBILAN</th>
+                        <th rowspan="2">PEMINJAM MATERIAL</th>
+                        <th rowspan="2">JUMLAH</th>
+                        <th rowspan="2">SATUAN</th>
+                        <th colspan="2">PENGEMBALIAN MATERIAL</th>
+                        <th colspan="2">LINK BA</th>
+                        <th rowspan="2">DOKUMENTASI</th>
+                        <th rowspan="2">KETERANGAN</th>
+                        <th rowspan="2" width="120">AKSI</th>
+                    </tr>
+                    <tr>
+                        <th>STATUS</th>
+                        <th>JUMLAH DIKEMBALIKAN</th>
+                        <th>LINK BA PENGAMBILAN MATERIAL</th>
+                        <th>LINK BA PENGEMBALIAN MATERIAL</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -275,51 +255,75 @@ if(!$query){
                         while($d = mysqli_fetch_assoc($query)){
                     ?>
                     <tr>
-                        <td><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
+                        <td class="text-center fw-bold"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
+                        <td class="fw-bold"><?= htmlspecialchars($d['nama_material'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['asal_material'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['tanggal_pengambilan'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['peminjam'] ?? '-'); ?></td>
+                        <td><span class="badge bg-warning text-dark px-2 py-1"><?= number_format((float)($d['jumlah'] ?? 0)); ?></span></td>
+                        <td><?= htmlspecialchars($d['satuan'] ?? '-'); ?></td>
+                        
                         <td>
-                            <div class="d-flex gap-1">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white"><i class="fa-solid fa-eye"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white"><i class="fa-solid fa-pen"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
+                            <?php
+                            $status = strtoupper(trim($d['status_kembali'] ?? ''));
+                            if ($status == 'SUDAH') {
+                                echo '<span class="badge bg-success">SUDAH</span>';
+                            } else {
+                                echo '<span class="badge bg-warning text-dark">BELUM</span>';
+                            }
+                            ?>
+                        </td>
+                        <td><?= htmlspecialchars($d['jumlah_dikembalikan'] ?? '-'); ?></td>
+                        
+                        <td>
+                            <?php if(!empty($d['link_ba_ambil'])): ?>
+                                <a href="<?= htmlspecialchars($d['link_ba_ambil']); ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-link"></i> BA Ambil</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if(!empty($d['link_ba_kembali'])): ?>
+                                <a href="<?= htmlspecialchars($d['link_ba_kembali']); ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-link"></i> BA Kembali</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
+                        
+                        <td>
+                            <?php if(!empty($d['dokumentasi'])): ?>
+                                <a href="<?= htmlspecialchars($d['dokumentasi']); ?>" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-image"></i> Lihat</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
+                        <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
+                        <td class="text-center">
+                            <div class="btn-group gap-1">
+                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-xs btn-outline-info rounded-2 p-1 px-2" style="font-size: 0.75rem;" title="Detail"><i class="fa-solid fa-eye"></i></a>
+                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-xs btn-outline-warning rounded-2 p-1 px-2" style="font-size: 0.75rem;" title="Edit"><i class="fa-solid fa-pen-to-square"></i></a>
+                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-xs btn-outline-danger rounded-2 p-1 px-2" style="font-size: 0.75rem;" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus data peminjaman ini?');"><i class="fa-solid fa-trash-can"></i></a>
                             </div>
                         </td>
-                        <td><?= htmlspecialchars($d['jenis_ba'] ?? ''); ?></td>
-                        <td><?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
-                        <td class="fw-bold"><?= htmlspecialchars($d['nama_material'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['merk_jenis'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['jenis_barang'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['sumber_barang'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['satuan'] ?? ''); ?></td>
-                        <td><span class="neon-badge-stock"><?= number_format((int)($d['jumlah'] ?? 0)); ?></span></td>
-                        <td><?= htmlspecialchars($d['tujuan'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['kondisi'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['vendor'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['berita_acara'] ?? ''); ?></td>
                     </tr>
                     <?php } } else { ?>
                     <tr>
-                        <td colspan="14" class="text-center py-5" style="color: var(--text-muted) !important;">
-                            <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data kosong atau tidak ditemukan.
+                        <td colspan="14" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 opacity-25"></i> Data kosong atau tidak ditemukan.
                         </td>
                     </tr>
                     <?php } ?>
                 </tbody>
             </table>
         </div>
-        
+
         <?php if($total_halaman > 1): ?>
-        <nav class="d-flex justify-content-center mt-4">
-            <ul class="pagination">
+        <nav aria-label="Navigasi Halaman" class="mb-4">
+            <ul class="pagination justify-content-center gap-2">
                 <li class="page-item <?= ($page <= 1) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="?page=<?= $page-1; ?>&cari=<?= urlencode($cari_clean); ?>">&laquo;</a>
+                    <a class="page-link border-0 rounded-3 px-3 py-2 text-dark bg-white shadow-sm" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $page - 1; ?>"><i class="fa-solid fa-chevron-left"></i></a>
                 </li>
-                <?php for($i=1; $i<=$total_halaman; $i++): ?>
+                <?php for($i = 1; $i <= $total_halaman; $i++): ?>
                     <li class="page-item <?= ($page == $i) ? 'active' : ''; ?>">
-                        <a class="page-link" href="?page=<?= $i; ?>&cari=<?= urlencode($cari_clean); ?>"><?= $i; ?></a>
+                        <a class="page-link border-0 rounded-3 px-3 py-2 shadow-sm <?= ($page == $i) ? 'bg-primary text-white font-weight-bold' : 'bg-white text-dark'; ?>" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $i; ?>"><?= $i; ?></a>
                     </li>
                 <?php endfor; ?>
                 <li class="page-item <?= ($page >= $total_halaman) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="?page=<?= $page+1; ?>&cari=<?= urlencode($cari_clean); ?>">&raquo;</a>
+                    <a class="page-link border-0 rounded-3 px-3 py-2 text-dark bg-white shadow-sm" href="?cari=<?= urlencode($cari_clean); ?>&page=<?= $page + 1; ?>"><i class="fa-solid fa-chevron-right"></i></a>
                 </li>
             </ul>
         </nav>
@@ -332,14 +336,9 @@ if(!$query){
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            const container = this.nextElementSibling;
             this.classList.toggle('active');
-            
-            if (window.getComputedStyle(container).display === "block") {
-                container.style.display = "none";
-            } else {
-                container.style.display = "block";
-            }
+            const container = this.nextElementSibling;
+            container.style.display = container.style.display === "block" ? "none" : "block";
         });
     });
 </script>

@@ -11,13 +11,13 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id > 0) {
     $query = "DELETE FROM material_gudang WHERE id = $id";
     if (mysqli_query($conn, $query)) {
-        header("Location: ex_bongkaran.php");
+        header("Location: non_stok.php");
         exit;
     } else {
-        echo "<script>alert('Gagal menghapus data!'); window.location='ex_bongkaran.php';</script>";
+        echo "<script>alert('Gagal menghapus data!'); window.location='non_stok.php';</script>";
     }
 } else {
-    header("Location: ex_bongkaran.php");
+    header("Location: non_stok.php");
     exit;
 }
 ?>

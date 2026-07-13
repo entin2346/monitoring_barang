@@ -22,7 +22,7 @@ $cari_db = mysqli_real_escape_string($conn, $cari_pencarian);
 $cari_clean = trim($cari_db); 
 
 $kategori_db = mysqli_real_escape_string($conn, trim($kategori));
-$kategori_query = strtoupper(str_replace("_", " ", $kategori_db)); // Mengembalikan 'non_po' menjadi 'NON PO' untuk dicocokkan ke kolom database
+$kategori_query = strtoupper(str_replace("_", " ", $kategori_db)); 
 
 $limit = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -37,39 +37,41 @@ if ($cari_clean !== '') {
     $whereConditions[] = "(m.nama_material LIKE '%$cari_clean%')";
 }
 
-// Sinkronisasi Filter Pencarian Kategori dari URL (MUTLAK BERDASARKAN FILTER URL)
+// Sinkronisasi Filter Pencarian Kategori dari URL
 if ($kategori_db !== '') {
-    $kat_cari = trim(strtolower($kategori_db));
-    if ($kat_cari !== '') {
-        if ($kat_cari == 'stok' || $kat_cari == 'stock') {
-            // Jika memilih menu Stok, ambil data yang ID <= 63 ATAU yang teksnya memang 'stok'
-            $whereConditions[] = "(m.id <= 63 OR TRIM(LOWER(m.jenis_kategori)) = 'stok' OR TRIM(LOWER(m.jenis_kategori)) = 'stock')";
-        } elseif ($kat_cari == 'non stock' || $kat_cari == 'non-stock' || $kat_cari == 'non stok' || $kat_cari == 'non-stok' || $kat_cari == 'non stock') {
-            // Jika memilih menu Non Stok, ambil data yang ID > 63 dan BUKAN kategori kustom lain
-            $whereConditions[] = "m.id > 63 AND (TRIM(m.jenis_kategori) = '' OR m.jenis_kategori IS NULL OR TRIM(LOWER(m.jenis_kategori)) IN ('stok', 'stock', 'non stok', 'non-stok', 'non stock'))";
-        } else {
-            // Untuk kategori lain (ex_bongkaran, pre_memory, dll)
-            $whereConditions[] = "(TRIM(LOWER(m.jenis_kategori)) = '$kat_cari')";
-        }
+
+    $kat_cari = strtolower(trim($kategori_db));
+
+    if ($kat_cari == 'stock') {
+        $kat_cari = 'stok';
     }
+
+    if ($kat_cari == 'non-stock' || $kat_cari == 'non stock') {
+        $kat_cari = 'non stok';
+    }
+
+    $whereConditions[] =
+        "LOWER(TRIM(m.jenis_kategori)) = '$kat_cari'";
 }
 
-/* --- TAMBAHAN FITUR: QUERY KHUSUS UNTUK HITUNG STATISTIK GLOBAL (Sebelum di-filter klik kotak) --- */
+/* --- QUERY KHUSUS HITUNG STATISTIK GLOBAL (Berdasarkan Gudang Baru) --- */
 $whereClauseStats = implode(" AND ", $whereConditions);
 
+// Hitung total Stok Gudang Latimojong
 $stok_latimojong_query = mysqli_query($conn, "SELECT SUM(m.jumlah) AS total FROM material_gudang m WHERE $whereClauseStats AND (m.lokasi_penyimpanan LIKE '%latimojong%' OR m.lokasi_penyimpanan LIKE '%ltm%')");
 $total_latimojong = mysqli_fetch_assoc($stok_latimojong_query)['total'] ?? 0;
 
-$stok_makassar_query = mysqli_query($conn, "SELECT SUM(m.jumlah) AS total FROM material_gudang m WHERE $whereClauseStats AND (m.lokasi_penyimpanan LIKE '%makassar%' OR m.lokasi_penyimpanan LIKE '%mks%')");
-$total_makassar = mysqli_fetch_assoc($stok_makassar_query)['total'] ?? 0;
+// Hitung total Stok Gudang Hertasning
+$stok_hertasning_query = mysqli_query($conn, "SELECT SUM(m.jumlah) AS total FROM material_gudang m WHERE $whereClauseStats AND (m.lokasi_penyimpanan LIKE '%hertasning%' OR m.lokasi_penyimpanan LIKE '%htn%')");
+$total_hertasning = mysqli_fetch_assoc($stok_hertasning_query)['total'] ?? 0;
 /* --- END STATISTIK GLOBAL --- */
 
 
-/* --- TAMBAHAN FITUR: JIKA KOTAK DIKLIK, TAMBAHKAN KONDISI WHERE PADA TABEL --- */
+/* --- FILTER KLIK KOTAK GUDANG --- */
 if ($gudang_filter === 'latimojong') {
     $whereConditions[] = "(m.lokasi_penyimpanan LIKE '%latimojong%' OR m.lokasi_penyimpanan LIKE '%ltm%')";
-} elseif ($gudang_filter === 'makassar') {
-    $whereConditions[] = "(m.lokasi_penyimpanan LIKE '%makassar%' OR m.lokasi_penyimpanan LIKE '%mks%')";
+} elseif ($gudang_filter === 'hertasning') {
+    $whereConditions[] = "(m.lokasi_penyimpanan LIKE '%hertasning%' OR m.lokasi_penyimpanan LIKE '%htn%')";
 }
 /* --- END FILTER KOTAK --- */
 
@@ -117,7 +119,7 @@ if (!$stok_query) {
 $total_stok = mysqli_fetch_assoc($stok_query);
 
 
-/* QUERY UTAMA (Sudah dikoneksikan dengan kolom satuan dari database_ba) */
+/* QUERY UTAMA */
 $query = mysqli_query($conn,"
     SELECT 
         m.id AS id,
@@ -127,9 +129,7 @@ $query = mysqli_query($conn,"
         m.no_rak,
         m.kondisi,
         m.lokasi_penyimpanan,
-        -- Mengambil satuan dari database_ba, jika kosong/null gunakan bawaan material_gudang
         COALESCE(NULLIF(TRIM(ba.satuan), ''), m.satuan) AS satuan,
-        -- Mengambil sumber_barang dari database_ba, jika kosong/null gunakan bawaan material_gudang
         COALESCE(NULLIF(TRIM(ba.sumber_barang), ''), m.sumber_barang) AS sumber_barang,
         COALESCE(NULLIF(TRIM(ba.keterangan), ''), m.keterangan) AS keterangan
     FROM material_gudang m
@@ -252,16 +252,60 @@ if(!$query){
         .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
         .main-body-wrapper { padding: 40px; }
 
-        .glass-stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 26px; transition: all 0.2s ease; text-decoration: none; display: block; }
+        /* --- STYLE UNTUK KOTAK STATISTIK --- */
+        .glass-stat-card { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border-color); 
+            border-top: 4px solid #cbd5e1;
+            border-radius: 16px; 
+            padding: 24px; 
+            transition: all 0.2s ease; 
+            text-decoration: none; 
+            display: block; 
+            position: relative;
+        }
         .glass-stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); cursor: pointer; }
-        .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
-        .stat-number { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0; }
         
-        /* Highlight Aktif jika Kotak diklik */
-        .card-blue { border-left: 5px solid #3b82f6; }
-        .card-green { border-left: 5px solid #10b981; }
-        .card-orange { border-left: 5px solid #f59e0b; }
-        .card-purple { border-left: 5px solid #8b5cf6; }
+        .stat-label { 
+            font-size: 0.8rem; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            color: #475569; 
+            font-weight: 700; 
+            margin-bottom: 12px; 
+        }
+        .stat-number { font-size: 2.2rem; font-weight: 800; margin: 0; line-height: 1; }
+        
+        .stat-icon-circle {
+            position: absolute;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .card-blue { border-top-color: #3b82f6; }
+        .card-blue .stat-number { color: #1e40af; }
+        .card-blue .stat-icon-circle { background: rgba(59, 130, 246, 0.08); color: #3b82f6; }
+
+        .card-green { border-top-color: #10b981; }
+        .card-green .stat-number { color: #10b981; }
+        .card-green .stat-icon-circle { background: rgba(16, 185, 129, 0.08); color: #10b981; }
+
+        .card-orange { border-top-color: #f59e0b; }
+        .card-orange .stat-number { color: #d97706; }
+        .card-orange .stat-icon-circle { background: rgba(245, 158, 11, 0.08); color: #f59e0b; }
+
+        .card-red { border-top-color: #ef4444; }
+        .card-red .stat-number { color: #ef4444; }
+        .card-red .stat-icon-circle { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
+        
         .card-active { background: #f8fafc; box-shadow: inset 0 0 0 2px var(--primary); }
 
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
@@ -397,29 +441,34 @@ if(!$query){
     </nav>
 
     <div class="main-body-wrapper">
+        <!-- --- BAGIAN KOTAK STATISTIK --- -->
         <div class="row g-3 mb-4">
             <div class="col-xl-3 col-md-6">
                 <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>" class="glass-stat-card card-blue <?= empty($gudang_filter) ? 'card-active' : ''; ?>">
                     <div class="stat-label">Total Klasifikasi Material</div>
-                    <div class="stat-number"><?= number_format($total_data); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Item</span></div>
+                    <div class="stat-number"><?= number_format($total_data); ?></div>
+                    <div class="stat-icon-circle"><i class="fa-solid fa-boxes-stacked"></i></div>
                 </a>
             </div>
             <div class="col-xl-3 col-md-6">
                 <div class="glass-stat-card card-green">
                     <div class="stat-label">Volume Akumulasi Stok</div>
-                    <div class="stat-number" style="color: #10b981;"><?= number_format(abs($total_stok['total'] ?? 0)); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                    <div class="stat-number"><?= number_format(abs($total_stok['total'] ?? 0)); ?></div>
+                    <div class="stat-icon-circle"><i class="fa-solid fa-cubes"></i></div>
                 </div>
             </div>
             <div class="col-xl-3 col-md-6">
                 <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=latimojong" class="glass-stat-card card-orange <?= $gudang_filter === 'latimojong' ? 'card-active' : ''; ?>">
-                    <div class="stat-label">Stok Gudang Latimojong</div>
-                    <div class="stat-number" style="color: #f59e0b;"><?= number_format(abs($total_latimojong)); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                    <div class="stat-label">GUDANG LATIMOJONG</div>
+                    <div class="stat-number"><?= number_format(abs($total_latimojong)); ?></div>
+                    <div class="stat-icon-circle"><i class="fa-solid fa-warehouse text-warning"></i></div>
                 </a>
             </div>
             <div class="col-xl-3 col-md-6">
-                <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=makassar" class="glass-stat-card card-purple <?= $gudang_filter === 'makassar' ? 'card-active' : ''; ?>">
-                    <div class="stat-label">Stok Gudang Makassar</div>
-                    <div class="stat-number" style="color: #8b5cf6;"><?= number_format(abs($total_makassar)); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                <a href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=hertasning" class="glass-stat-card card-red <?= $gudang_filter === 'hertasning' ? 'card-active' : ''; ?>">
+                    <div class="stat-label">GUDANG HERTASNING</div>
+                    <div class="stat-number"><?= number_format(abs($total_hertasning)); ?></div>
+                    <div class="stat-icon-circle"><i class="fa-solid fa-box-open text-danger"></i></div>
                 </a>
             </div>
         </div>
@@ -438,7 +487,7 @@ if(!$query){
                         <div id="hasil_autocomplete" class="autocomplete-box" style="display:none;"></div>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: #3b82f6; border: none; height: 100%;"><i class="fa-solid fa-sliders me-1"></i> Saring</button>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: #3b82f6; border: none; height: 100%;"><i class="fa-solid fa-sliders me-1"></i> Cari Komponen</button>
                     </div>
                     <div class="col-md-2">
                         <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: #10b981; border: none; height: 100%; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
@@ -471,11 +520,8 @@ if(!$query){
                     $no = $offset + 1;
                     if(mysqli_num_rows($query) > 0){
                         while($d = mysqli_fetch_assoc($query)){
-                            // Ambil kategori asli dari database, bersihkan spasi, dan jadikan huruf kecil
                             $kat_real = strtolower(trim($d['jenis_kategori'] ?? ''));
                             $id_material = (int)$d['id'];
-                            
-                            // Mengambil status filter kategori dari variabel URL ($kategori_db)
                             $kategori_aktif = isset($kategori_db) ? strtolower(trim($kategori_db)) : '';
                     ?>
                     <tr>
@@ -483,38 +529,60 @@ if(!$query){
                         <td class="fw-bold"><?= htmlspecialchars($d['nama_material'], ENT_QUOTES, 'UTF-8'); ?></td>
                         <td>
                             <?php 
-                            // 1. JIKA sedang membuka halaman filter menu "Stok", kunci badge menjadi Stok
                             if ($kategori_aktif == 'stok' || $kategori_aktif == 'stock') {
                                 echo '<span class="badge-kat kat-stock">Stok</span>';
-                            
-                            // 2. JIKA sedang membuka halaman filter menu "Non Stok", kunci badge menjadi Non Stok
                             } elseif ($kategori_aktif == 'non stok' || $kategori_aktif == 'non-stok' || $kategori_aktif == 'non stock') {
                                 echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
-                            
-                            // 3. JIKA di halaman utama / tanpa filter (Global)
                             } else {
-                                if (($d['keterangan'] ?? '') == 'Otomatis dari Registrasi BA') {
-                                    $kat = strtoupper(trim($d['jenis_kategori']));
-                                    if ($kat == 'STOCK' || $kat == 'STOK') {
-                                        echo '<span class="badge-kat kat-stock">STOCK</span>';
-                                    } elseif ($kat == 'NON STOCK' || $kat == 'NON-STOK') {
-                                        echo '<span class="badge-kat kat-nonstock">NON STOCK</span>';
-                                    } else {
-                                        echo '<span class="badge-kat kat-other">'.htmlspecialchars($kat).'</span>';
-                                    }
-                                } else {
-                                    if ($kat_real == '' || $kat_real == 'stok' || $kat_real == 'stock' || $kat_real == 'non stok' || $kat_real == 'non-stok' || $kat_real == 'non stock') {
-                                        if ($id_material <= 63) {
-                                            echo '<span class="badge-kat kat-stock">Stok</span>';
-                                        } else {
-                                            echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
-                                        }
-                                    } else {
-                                        echo '<span class="badge-kat kat-other">'
-                                            . htmlspecialchars(strtoupper($d['jenis_kategori']))
-                                            . '</span>';
-                                    }
-                                }
+                            
+
+switch($kat_real){
+
+    case 'stok':
+    case 'stock':
+
+        echo '<span class="badge-kat kat-stock">Stok</span>';
+        break;
+
+    case 'non stok':
+    case 'non-stock':
+    case 'non stock':
+
+        echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
+        break;
+
+    case 'non po':
+
+        echo '<span class="badge-kat kat-other">NON PO</span>';
+        break;
+
+    case 'ex bongkaran':
+
+        echo '<span class="badge-kat kat-other">EX BONGKARAN</span>';
+        break;
+
+    case 'pre memory':
+
+        echo '<span class="badge-kat kat-other">PRE MEMORY</span>';
+        break;
+
+    case 'peminjaman':
+
+        echo '<span class="badge-kat kat-other">PEMINJAMAN</span>';
+        break;
+
+    case 'pemakaian':
+
+        echo '<span class="badge-kat kat-other">PEMAKAIAN</span>';
+        break;
+
+    default:
+
+        echo '<span class="badge-kat kat-other">'
+            . htmlspecialchars(strtoupper($d['jenis_kategori'] ?: '-'))
+            . '</span>';
+
+}
                             }
                             ?>
                         </td>
@@ -556,7 +624,6 @@ if(!$query){
         <?php if($total_halaman > 1) { ?>
         <nav class="pb-5">
             <ul class="pagination justify-content-center align-items-center">
-                
                 <?php if($page > 1){ ?>
                     <li class="page-item">
                         <a class="page-link" href="?cari=<?= urlencode($cari_clean); ?>&kategori=<?= urlencode($kategori_db); ?>&gudang=<?= urlencode($gudang_filter); ?>&page=<?= $page-1; ?>">
@@ -603,7 +670,6 @@ if(!$query){
                 <?php } else { ?>
                     <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-chevron-right"></i></span></li>
                 <?php } ?>
-
             </ul>
         </nav>
         <?php } ?>

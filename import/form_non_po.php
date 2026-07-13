@@ -51,19 +51,89 @@ if (isset($_POST['submit_import'])) {
                     continue;
                 }
 
-                // Query Insert Spesifik ke Tabel non_po
-                $query = "INSERT INTO non_po (jenis_ba, tanggal, nama_material, merk_jenis, jenis_barang, sumber_barang, satuan, jumlah, tujuan, kondisi_material, no_seri, asal_vendor, berita_acara, dok_kembali, keterangan, ket_tambahan, tug5) 
-                          VALUES ('$jenis_ba', '$tanggal', '$nama_material', '$merk_jenis', '$jenis_barang', '$sumber_barang', '$satuan', '$jumlah', '$tujuan', '$kondisi_material', '$no_seri', '$asal_vendor', '$berita_acara', '$dok_kembali', '$keterangan', '$ket_tambahan', '$tug5')";
-                
-                if (mysqli_query($conn, $query)) {
+                // ==========================
+                // 1. SIMPAN KE TABEL non_po
+                // ==========================
+                $query_non_po = "INSERT INTO non_po
+                (
+                jenis_ba,
+                tanggal,
+                nama_material,
+                merk_jenis,
+                jenis_barang,
+                sumber_barang,
+                satuan,
+                jumlah,
+                tujuan,
+                kondisi_material,
+                no_seri,
+                asal_vendor,
+                berita_acara,
+                dok_kembali,
+                keterangan,
+                ket_tambahan,
+                tug5
+                )
+                VALUES
+                (
+                '$jenis_ba',
+                '$tanggal',
+                '$nama_material',
+                '$merk_jenis',
+                '$jenis_barang',
+                '$sumber_barang',
+                '$satuan',
+                '$jumlah',
+                '$tujuan',
+                '$kondisi_material',
+                '$no_seri',
+                '$asal_vendor',
+                '$berita_acara',
+                '$dok_kembali',
+                '$keterangan',
+                '$ket_tambahan',
+                '$tug5'
+                )";
+
+                if(!mysqli_query($conn,$query_non_po)){
+                    $gagal_insert++;
+                    $index++;
+                    continue;
+                }
+
+                // ==========================
+                // 2. SIMPAN KE material_gudang
+                // ==========================
+                $query_material = "INSERT INTO material_gudang
+                (
+                nama_material,
+                satuan,
+                jumlah,
+                kondisi,
+                keterangan,
+                jenis_kategori
+                )
+                VALUES
+                (
+                '$nama_material',
+                '$satuan',
+                '$jumlah',
+                '$kondisi_material',
+                '$keterangan',
+                'non_po'
+                )";
+
+                if(mysqli_query($conn,$query_material)){
                     $sukses_insert++;
-                } else {
+                }else{
                     $gagal_insert++;
                 }
+
                 $index++;
             }
             fclose($handle);
-            echo "<script>alert('Selesai! Berhasil Impor: $sukses_insert data. Gagal: $gagal_insert data.'); window.location='../kategori/non_po.php';</script>";
+            // FIX: Mengubah rute redirect setelah sukses import
+            echo "<script>alert('Selesai! Berhasil Impor: $sukses_insert data. Gagal: $gagal_insert data.'); window.location='../kategori/non_po/non_po.php';</script>";
         } else {
             echo "<script>alert('Gagal membaca dokumen berkas CSV!');</script>";
         }
@@ -270,7 +340,8 @@ if (isset($_POST['submit_import'])) {
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
-                            <a href="../kategori/non_po.php" class="btn btn-back-custom">
+                            <!-- FIX: Mengubah rute link tombol Kembali -->
+                            <a href="../kategori/non_po/non_po.php" class="btn btn-back-custom">
                                 <i class="fa-solid fa-circle-arrow-left me-1"></i> Kembali
                             </a>
                             <button type="submit" name="submit_import" class="btn btn-action-submit">

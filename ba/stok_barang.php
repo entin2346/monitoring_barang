@@ -67,7 +67,7 @@ ORDER BY tanggal DESC
 <title>Stok Material BA | I-CALM</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <style>
@@ -80,6 +80,11 @@ ORDER BY tanggal DESC
         --border-color: rgba(148, 163, 184, 0.12);
         --bg-sidebar: #d0e1f9; 
     }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
     * {
         margin: 0;
@@ -158,13 +163,13 @@ ORDER BY tanggal DESC
     /* NAVBAR ATAS */
     .navbar-custom { 
         background: #ffffff;
-        padding: 14px 20px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999;
+        padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999;
     }
     
-    /* GAYA TULISAN REKAPITULASI MATERIAL YANG SUPER MENCOLOK (GLOWING GRADIENT VIOLET) */
+    /* JUDUL REKAPITULASI MATERIAL */
     .brand-mencolok-stok {
         font-weight: 800 !important;
-        font-size: 1.4rem !important;
+        font-size: 1.3rem !important;
         letter-spacing: 0.5px;
         background: linear-gradient(135deg, #0284c7, #6366f1);
         -webkit-background-clip: text;
@@ -172,7 +177,7 @@ ORDER BY tanggal DESC
         text-shadow: 0px 2px 10px rgba(99, 102, 241, 0.15);
     }
 
-    /* TOMBOL KEMBALI WARNA BIRU MENCOLOK */
+    /* TOMBOL KEMBALI */
     .btn-kembali-biru {
         background: linear-gradient(135deg, #0284c7, #2563eb) !important;
         color: #ffffff !important;
@@ -199,7 +204,7 @@ ORDER BY tanggal DESC
         transform: translateY(1px);
     }
 
-    /* BADGE STOK KOSONG */
+    /* BADGE STOK */
     .badge-stok-kosong {
         background: #ef4444 !important;
         color: #ffffff !important;
@@ -211,50 +216,58 @@ ORDER BY tanggal DESC
     }
 
     /* WORKSPACE BODY */
-    .main-body-wrapper { padding: 20px; }
+    .main-body-wrapper { padding: 40px; }
 
     /* BOX PENCARIAN */
     .cyber-search-box {
-        background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;
-        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.01);
+        background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.01);
     }
-    .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
-    .input-cyber-group input { background: transparent !important; border: none !important; color: var(--text-main) !important; padding: 10px 14px; font-weight: 500; font-size: 0.9rem; }
+    .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
+    .input-cyber-group input { background: transparent !important; border: none !important; color: var(--text-main) !important; padding: 14px 14px; font-weight: 500; font-size: 0.92rem; }
     .input-cyber-group input::placeholder { color: #94a3b8; }
-    .input-cyber-group .input-group-text { background: transparent; border: none; color: #64748b; padding-left: 14px; }
+    .input-cyber-group .input-group-text { background: transparent; border: none; color: #64748b; padding-left: 18px; }
 
     /* TABEL CONTAINER */
     .cyber-table-card {
-        background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; 
-        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02); overflow-x: auto; width: 100%;
+        background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; 
+        box-shadow: 0 4px 16px rgba(0,0,0,0.02); overflow-x: auto; width: 100%;
     }
     
-    /* GAYA TABEL */
-    .table-cyber { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
-    .table-cyber thead th { 
-        background: #f8fafc !important; color: #334155 !important; 
-        font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.3px; 
-        padding: 14px 24px; 
-        border-bottom: 1px solid var(--border-color); white-space: nowrap;
+    /* STRUKTUR TABEL PRESISI DAN UKURAN SAMA DENGAN BARANG_MASUK */
+    .table-cyber { 
+        width: 100%; 
+        border-collapse: separate; 
+        border-spacing: 0; 
+        margin: 0;
+        table-layout: fixed; 
     }
-    .table-cyber tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border-color); }
-    .table-cyber tbody tr { transition: all 0.15s ease; }
-    .table-cyber tbody tr:hover td { background: #f8fafc; }
+    .table-cyber thead th, 
     .table-cyber tbody td { 
-        padding: 14px 24px; 
-        font-size: 0.85rem; vertical-align: middle; color: var(--text-main) !important; 
-        white-space: nowrap; 
-    }
-
-    /* PENGATURAN TEKS KREATIVE WRAPPING */
-    .col-text-wrap {
-        max-width: 280px;
+        padding: 12px 10px !important; 
+        font-size: 0.85rem; 
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: normal !important; 
         word-break: break-word;
     }
-    .col-nowrap {
-        white-space: nowrap !important;
-    }
+    .table-cyber tbody tr:hover { background-color: #f8fafc !important; }
+    .table-cyber tbody td { border-bottom: 1px solid #f1f5f9; }
+
+    /* LEBAR PRESISI PER KOLOM PERSIS SEPERTI BARANG_MASUK */
+    .table-cyber th:nth-child(1), .table-cyber td:nth-child(1) { width: 50px; text-align: center; } 
+    .table-cyber th:nth-child(2), .table-cyber td:nth-child(2) { width: 110px; } 
+    .table-cyber th:nth-child(3), .table-cyber td:nth-child(3) { width: 180px; } 
+    .table-cyber th:nth-child(4), .table-cyber td:nth-child(4) { width: 120px; } 
+    .table-cyber th:nth-child(5), .table-cyber td:nth-child(5) { width: 120px; } 
+    .table-cyber th:nth-child(6), .table-cyber td:nth-child(6) { width: 140px; } 
+    .table-cyber th:nth-child(7), .table-cyber td:nth-child(7) { width: 80px; text-align: center; }  
+    .table-cyber th:nth-child(8), .table-cyber td:nth-child(8) { width: 95px; text-align: center; }  
+    .table-cyber th:nth-child(9), .table-cyber td:nth-child(9) { width: 130px; } 
+    .table-cyber th:nth-child(10), .table-cyber td:nth-child(10) { width: 180px; } 
+    .table-cyber th:nth-child(11), .table-cyber td:nth-child(11) { width: 140px; } 
+    .table-cyber th:nth-child(12), .table-cyber td:nth-child(12) { width: 150px; } 
 </style>
 </head>
 <body>
@@ -340,29 +353,29 @@ ORDER BY tanggal DESC
         <div class="container-fluid d-flex justify-content-between align-items-center px-0">
             <span class="navbar-brand mb-0 h1 d-flex align-items-center brand-mencolok-stok">
                 <i class="fa-solid fa-cubes me-2" style="color: #0284c7; -webkit-text-fill-color: initial;"></i> REKAPITULASI MATERIAL
-                <span class="ms-2 fw-normal" style="font-size: 0.9rem; color: var(--text-muted); -webkit-text-fill-color: var(--text-muted);">/ Stok Barang</span>
+                <span class="ms-2 fw-normal" style="font-size: 0.9rem; color: var(--text-muted); -webkit-text-fill-color: var(--text-muted);">/ STOK BARANG</span>
             </span>
             
             <a href="index.php" class="btn btn-kembali-biru">
-                <i class="fa-solid fa-chevron-left"></i> Kembali
+                <i class="fa-solid fa-chevron-left"></i> KEMBALI
             </a>
         </div>
     </nav>
 
     <div class="container-fluid main-body-wrapper">
         
-        <div class="cyber-search-box mb-3">
+        <div class="cyber-search-box mb-4">
             <form method="GET" action="">
                 <div class="row g-2">
                     <div class="col-md-10">
                         <div class="input-group input-cyber-group">
                             <span class="input-group-text"><i class="fa-solid fa-magnifying-glass text-muted" style="font-size: 0.85rem;"></i></span>
-                            <input type="text" name="cari" class="form-control" placeholder="Cari berdasarkan nama material, merk, tipe, vendor..." value="<?= htmlspecialchars($cari); ?>">
+                            <input type="text" name="cari" class="form-control" placeholder="CARI BERDASARKAN NAMA MATERIAL, MERK, TIPE, VENDOR..." value="<?= htmlspecialchars(strtoupper($cari)); ?>">
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold" style="border-radius: 10px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height: 100%; font-size: 0.85rem;">
-                            Cari
+                        <button type="submit" class="btn btn-primary fw-bold w-100" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height: 100%; font-size: 0.9rem;">
+                            CARI
                         </button>
                     </div>
                 </div>
@@ -373,8 +386,8 @@ ORDER BY tanggal DESC
             <table class="table-cyber">
                 <thead>
                     <tr>
-                        <th width="50" class="text-center">NO</th>
-                        <th>TANGGAL</th>
+                        <th>NO</th>
+                        <th>TANGGAL RECORD</th>
                         <th>NAMA MATERIAL</th>
                         <th>MERK / JENIS</th>
                         <th>JENIS MATERIAL</th>
@@ -392,35 +405,37 @@ ORDER BY tanggal DESC
                     $no = 1;
                     if(mysqli_num_rows($query) > 0){
                         while($d = mysqli_fetch_assoc($query)){
-                            // HITUNG SELISIH STOK
                             $hitung_stok = $d['total_masuk'] - $d['total_keluar'];
-                            
-                            // Jika stok mines (< 0), otomatis ganti/paksa jadi 0 saja
                             $stok = ($hitung_stok < 0) ? 0 : $hitung_stok;
-                            
-                            // Pewarnaan kelas badge mencolok
                             $badge_class = ($stok > 0) ? 'badge-stok-aman' : 'badge-stok-kosong';
                     ?>
                     <tr>
-                        <td class="text-center fw-bold col-nowrap" style="color: var(--text-muted) !important; font-size:0.8rem;"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
-                        <td class="col-nowrap" style="font-weight: 500; color: var(--text-muted) !important; font-size: 0.8rem;"><i class="fa-regular fa-calendar me-1" style="font-size: 0.75rem;"></i> <?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
-                        <td class="fw-bold text-dark col-text-wrap"><?= htmlspecialchars($d['nama_barang']); ?></td>
-                        <td class="col-text-wrap"><?= htmlspecialchars($d['merk_jenis']); ?></td>
-                        <td class="col-text-wrap"><?= htmlspecialchars($d['jenis_barang']); ?></td>
-                        <td class="col-text-wrap"><?= htmlspecialchars($d['sumber_barang']); ?></td>
-                        <td class="text-center col-nowrap"><span class="badge bg-light text-secondary border px-2 py-0.5" style="border-radius:4px; font-size:0.75rem; font-weight:600;"><?= htmlspecialchars($d['satuan']); ?></span></td>
-                        <td class="text-center col-nowrap">
+                        <td class="text-center fw-bold" style="color: var(--text-muted) !important; font-size:0.85rem;"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
+                        <td class="fw-semibold text-muted"><i class="fa-regular fa-calendar me-1" style="font-size: 0.75rem;"></i> <?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
+                        
+                        <td class="fw-bold"><?= htmlspecialchars(strtoupper($d['nama_barang'] ?? '')); ?></td>
+                        
+                        <td><?= htmlspecialchars(strtoupper($d['merk_jenis'] ?? '')); ?></td>
+                        <td><?= htmlspecialchars(strtoupper($d['jenis_barang'] ?? '')); ?></td>
+                        <td class="text-muted"><?= htmlspecialchars(strtoupper($d['sumber_barang'] ?? '')); ?></td>
+                        <td class="text-center"><span class="badge bg-light text-secondary border px-2 py-1" style="border-radius:6px; font-size:0.75rem; font-weight:600;"><?= htmlspecialchars(strtoupper($d['satuan'] ?? '')); ?></span></td>
+                        
+                        <td class="text-center">
                             <span class="badge <?= $badge_class ?> px-3 rounded-pill" style="font-size:0.8rem; font-weight:700;"><?= number_format($stok); ?></span>
                         </td>
-                        <td class="col-text-wrap" style="font-family: monospace; font-size: 0.8rem; letter-spacing: 0.2px;"><?= htmlspecialchars($d['no_seri']); ?></td>
-                        <td class="col-text-wrap"><?= htmlspecialchars($d['asal_barang_vendor']); ?></td>
-                        <td class="col-nowrap"><span class="badge bg-primary-subtle text-primary border-0 px-2 py-0.5" style="border-radius:4px; font-size:0.75rem; font-weight:600;"><?= htmlspecialchars($d['kategori_material']); ?></span></td>
-                        <td class="col-text-wrap" style="color: var(--text-muted) !important; font-size: 0.8rem;" title="<?= htmlspecialchars($d['keterangan']); ?>"><?= htmlspecialchars($d['keterangan']); ?></td>
+                        
+                        <td class="fw-bold text-primary" style="font-family: monospace; font-size: 0.9rem;"><?= htmlspecialchars(strtoupper($d['no_seri'] ?? '')); ?></td>
+                        <td><?= htmlspecialchars(strtoupper($d['asal_barang_vendor'] ?? '')); ?></td>
+                        
+                        <!-- KELAS BOLD & DARK TELAH DIHAPUS, MENGIKUTI TEKS REGULAR/BIASA -->
+                        <td><?= htmlspecialchars(strtoupper($d['kategori_material'] ?? '')); ?></td>
+                        
+                        <td class="text-muted" title="<?= htmlspecialchars(strtoupper($d['keterangan'] ?? '')); ?>"><?= htmlspecialchars(strtoupper($d['keterangan'] ?? '')); ?></td>
                     </tr>
                     <?php 
                         }
                     } else {
-                        echo "<tr><td colspan='12' class='text-center py-4 fw-medium' style='color: var(--text-muted) !important; font-size:0.85rem;'><i class='fa-solid fa-box-open d-block mb-1 fs-4 opacity-50'></i> Data tidak ditemukan</td></tr>";
+                        echo "<tr><td colspan='12' class='text-center py-5 fw-bold text-muted'><i class='fa-solid fa-box-open d-block fs-1 mb-3 opacity-25'></i> DATA TIDAK DITEMUKAN</td></tr>";
                     }
                     ?>
                 </tbody>

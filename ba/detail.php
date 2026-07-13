@@ -113,8 +113,26 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
             border-radius: 16px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);
         }
 
-        .table-detail th { background-color: #f8fafc; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; width: 25%; }
-        .table-detail td { color: var(--text-main); font-weight: 500; font-size: 0.92rem; }
+        /* MODERN HORIZONTAL ITEM STYLE */
+        .detail-item-box {
+            padding: 14px 4px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .detail-label-text {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .detail-value-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -209,81 +227,98 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
     </nav>
 
     <div class="main-body-wrapper">
-        <div class="glass-detail-card">
-            <table class="table table-bordered table-detail align-middle mb-0">
-                <tr>
-                    <th>Jenis Berita Acara</th>
-                    <td>
-                        <?php if(strtoupper($d['jenis_berita_acara']) == 'MASUK'): ?>
-                            <span class="badge bg-success-subtle text-success px-2 py-1 fw-bold">MASUK</span>
-                        <?php else: ?>
-                            <span class="badge bg-danger-subtle text-danger px-2 py-1 fw-bold">KELUAR</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Tanggal Dokumen</th>
-                    <td><?= date('d F Y', strtotime($d['tanggal'])); ?></td>
-                </tr>
-                <tr>
-                    <th>Nama Barang / Material</th>
-                    <td class="fw-bold text-primary"><?= htmlspecialchars($d['nama_barang']); ?></td>
-                </tr>
-                <tr>
-                    <th>Merk / Jenis</th>
-                    <td><?= htmlspecialchars($d['merk_jenis'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Jenis Barang</th>
-                    <td><?= htmlspecialchars($d['jenis_barang'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Sumber Material</th>
-                    <td><?= htmlspecialchars($d['sumber_barang'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Satuan</th>
-                    <td><?= htmlspecialchars($d['satuan'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Jumlah Volume</th>
-                    <td class="fw-bold"><?= number_format($d['jumlah']); ?></td>
-                </tr>
-                <tr>
-                    <th>Nomor Seri Komponen</th>
-                    <td style="font-family: monospace; font-size: 0.95rem;"><?= htmlspecialchars($d['no_seri'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Pemasok / Vendor</th>
-                    <td><?= htmlspecialchars($d['asal_barang_vendor'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Kategori Material</th>
-                    <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1 fw-semibold"><?= htmlspecialchars($d['kategori_material']); ?></span></td>
-                </tr>
-                <tr>
-                    <th>Kondisi Fisik</th>
-                    <td>
-                        <?php if(strtoupper($d['kondisi_material']) == 'BAIK'): ?>
-                            <span class="badge bg-success text-white px-2 py-1">BAIK</span>
-                        <?php elseif(strtoupper($d['kondisi_material']) == 'RUSAK'): ?>
-                            <span class="badge bg-danger text-white px-2 py-1">RUSAK</span>
-                        <?php else: ?>
-                            <span class="badge bg-warning text-dark px-2 py-1">PERBAIKAN</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Lokasi / Unit Tujuan</th>
-                    <td><?= htmlspecialchars($d['tujuan'] ?: '-'); ?></td>
-                </tr>
-                <tr>
-                    <th>Keterangan Deskriptif</th>
-                    <td><?= nl2br(htmlspecialchars($d['keterangan'] ?: '-')); ?></td>
-                </tr>
-                <tr>
-                    <th>Berkas Lampiran</th>
-                    <td>
+        <div class="glass-detail-card shadow-sm p-4 bg-white border-0">
+            
+            <!-- HEADER INFO UTAMA -->
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-3 border-bottom">
+                <div>
+                    <span class="text-muted small uppercase tracking-wider d-block mb-1">Nama Barang / Material</span>
+                    <h3 class="fw-bold text-primary mb-0"><?= htmlspecialchars($d['nama_barang']); ?></h3>
+                </div>
+                <div class="text-end">
+                    <span class="text-muted small d-block mb-1">Jenis Berita Acara</span>
+                    <?php if(strtoupper($d['jenis_berita_acara']) == 'MASUK'): ?>
+                        <span class="badge bg-success-subtle text-success px-3 py-2 fw-bold fs-6 rounded-3">MASUK</span>
+                    <?php else: ?>
+                        <span class="badge bg-danger-subtle text-danger px-3 py-2 fw-bold fs-6 rounded-3">KELUAR</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- GRID DUA KOLOM HORIZONTAL -->
+            <div class="row px-1">
+                <!-- KOLOM KIRI -->
+                <div class="col-md-6 pe-md-4">
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Tanggal Dokumen</label>
+                        <span class="detail-value-text"><i class="fa-regular fa-calendar me-2 text-secondary"></i><?= date('d F Y', strtotime($d['tanggal'])); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Merk / Jenis</label>
+                        <span class="detail-value-text"><?= htmlspecialchars($d['merk_jenis'] ?: '-'); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Jenis Barang</label>
+                        <span class="detail-value-text"><?= htmlspecialchars($d['jenis_barang'] ?: '-'); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Sumber Material</label>
+                        <span class="detail-value-text"><?= htmlspecialchars($d['sumber_barang'] ?: '-'); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Satuan</label>
+                        <span class="detail-value-text"><?= htmlspecialchars($d['satuan'] ?: '-'); ?></span>
+                    </div>
+                    <div class="detail-item-box border-bottom-md-0">
+                        <label class="detail-label-text">Jumlah Volume</label>
+                        <span class="detail-value-text fw-bold text-dark fs-5"><?= number_format($d['jumlah']); ?></span>
+                    </div>
+                </div>
+
+                <!-- KOLOM KANAN -->
+                <div class="col-md-6 ps-md-4">
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Nomor Seri Komponen</label>
+                        <span class="detail-value-text" style="font-family: monospace;"><?= htmlspecialchars($d['no_seri'] ?: '-'); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Pemasok / Vendor</label>
+                        <span class="detail-value-text"><i class="fa-solid fa-building me-2 text-secondary"></i><?= htmlspecialchars($d['asal_barang_vendor'] ?: '-'); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Kategori Material</label>
+                        <span class="badge bg-secondary-subtle text-secondary px-2 py-1 fw-semibold mt-1"><?= htmlspecialchars($d['kategori_material']); ?></span>
+                    </div>
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Kondisi Fisik</label>
+                        <div class="mt-1">
+                            <?php if(strtoupper($d['kondisi_material']) == 'BAIK'): ?>
+                                <span class="badge bg-success text-white px-3 py-1.5 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> BAIK</span>
+                            <?php elseif(strtoupper($d['kondisi_material']) == 'RUSAK'): ?>
+                                <span class="badge bg-danger text-white px-3 py-1.5 rounded-pill"><i class="fa-solid fa-circle-xmark me-1"></i> RUSAK</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill"><i class="fa-solid fa-circle-exclamation me-1"></i> PERBAIKAN</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="detail-item-box border-0">
+                        <label class="detail-label-text">Lokasi / Unit Tujuan</label>
+                        <span class="detail-value-text"><i class="fa-solid fa-location-dot me-2 text-secondary"></i><?= htmlspecialchars($d['tujuan'] ?: '-'); ?></span>
+                    </div>
+                </div>
+
+                <!-- FULL WIDTH KETERANGAN -->
+                <div class="col-12 mt-2">
+                    <div class="detail-item-box">
+                        <label class="detail-label-text">Keterangan Deskriptif</label>
+                        <p class="mb-0 fw-semibold text-dark" style="white-space: pre-line;"><?= nl2br(htmlspecialchars($d['keterangan'] ?: '-')); ?></p>
+                    </div>
+                </div>
+
+                <!-- FULL WIDTH LAMPIRAN -->
+                <div class="col-12 mt-2">
+                    <div class="detail-item-box border-0">
+                        <label class="detail-label-text mb-3">Berkas Lampiran</label>
                         <div class="d-flex flex-wrap gap-3">
                             <?php 
                             if(!empty($d['file_ba'])) {
@@ -296,24 +331,24 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
                             ?>
                                     <div style="max-width: 240px; width: 100%;">
                                         <?php if(in_array($ext, ['jpg','jpeg','png'])): ?>
-                                            <div class="border rounded p-2 text-center bg-light">
+                                            <div class="border rounded-3 p-2 text-center bg-white shadow-sm">
                                                 <img src="<?= $file_path; ?>" class="img-fluid rounded mb-2 img-thumbnail" style="max-height: 120px; cursor: pointer;" onclick="openPreviewImg('<?= $file_path; ?>')">
-                                                <p class="mb-0 text-truncate small fw-semibold" title="<?= htmlspecialchars($file); ?>"><?= htmlspecialchars($file); ?></p>
+                                                <p class="mb-0 text-truncate small fw-semibold text-secondary" title="<?= htmlspecialchars($file); ?>"><?= htmlspecialchars($file); ?></p>
                                                 <a href="<?= $file_path; ?>" class="btn btn-sm btn-primary mt-2 px-3 w-100" download><i class="fa-solid fa-download me-1"></i>Unduh</a>
                                             </div>
                                         <?php elseif($ext === 'pdf'): ?>
-                                            <div class="p-3 text-center bg-light border rounded">
+                                            <div class="p-3 text-center bg-white border rounded-3 shadow-sm">
                                                 <i class="fa-solid fa-file-pdf fs-1 text-danger mb-2"></i>
-                                                <p class="mb-1 text-truncate small fw-semibold" title="<?= htmlspecialchars($file); ?>"><?= htmlspecialchars($file); ?></p>
+                                                <p class="mb-1 text-truncate small fw-semibold text-secondary" title="<?= htmlspecialchars($file); ?>"><?= htmlspecialchars($file); ?></p>
                                                 <div class="d-flex gap-1 mt-2">
                                                     <a href="<?= $file_path; ?>" target="_blank" class="btn btn-sm btn-outline-danger w-100">Buka</a>
                                                     <a href="<?= $file_path; ?>" class="btn btn-sm btn-danger w-100" download>Unduh</a>
                                                 </div>
                                             </div>
                                         <?php else: ?>
-                                            <div class="p-3 text-center bg-light border rounded">
+                                            <div class="p-3 text-center bg-white border rounded-3 shadow-sm">
                                                 <i class="fa-solid fa-file-invoice fs-1 text-secondary mb-2"></i>
-                                                <p class="mb-1 text-truncate small fw-semibold" title="<?= htmlspecialchars($file); ?>"><?= htmlspecialchars($file); ?></p>
+                                                <p class="mb-1 text-truncate small fw-semibold text-secondary" title="<?= htmlspecialchars($file); ?>"><?= htmlspecialchars($file); ?></p>
                                                 <a href="<?= $file_path; ?>" class="btn btn-sm btn-success mt-2 px-3 w-100" download><i class="fa-solid fa-download me-1"></i>Unduh</a>
                                             </div>
                                         <?php endif; ?>
@@ -321,15 +356,16 @@ if(!$d){ echo "Data tidak ditemukan"; exit; }
                             <?php 
                                 } 
                             } else { 
-                                echo "<span class='text-muted small italic'>Tidak ada berkas lampiran</span>";
+                                echo "<span class='text-muted small italic'><i class='fa-solid fa-info-circle me-1'></i> Tidak ada berkas lampiran</span>";
                             } 
                             ?>
                         </div>
-                    </td>
-                </tr>
-            </table>
+                    </div>
+                </div>
+            </div>
             
-            <div class="mt-4 pt-3 border-top d-flex gap-2">
+            <!-- TOMBOL AKSI -->
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-start">
                 <a href="index.php" class="btn btn-secondary px-4 py-2 fw-semibold" style="border-radius: 10px;">
                     <i class="fa-solid fa-chevron-left me-1"></i> Kembali
                 </a>

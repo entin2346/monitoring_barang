@@ -22,47 +22,71 @@ if (isset($_POST['submit_import'])) {
             $index = 0;
             
             while (($row = fgetcsv($handle, 10000, ",")) !== FALSE) {
+
                 
                 // Lewati baris pertama karena merupakan Header/Judul Kolom CSV
-                if ($index == 0) {
-                    $index++;
-                    continue;
-                }
+               if ($index == 0) {
+    $index++;
+    continue;
+}
                 
                 // Pemetaan Kolom CSV berdasarkan gambar tabel Stok / Non Stok:
-                // Kolom A = Indeks 0 (NO)
-                $nama_material      = mysqli_real_escape_string($conn, $row[1] ?? '');  // Kolom B: NAMA KELOMPOK MATERIAL GUDANG
-                $kategori_sub       = mysqli_real_escape_string($conn, $row[2] ?? '');  // Kolom C: KATEGORI
-                $satuan             = mysqli_real_escape_string($conn, $row[3] ?? '');  // Kolom D: SATUAN
-                $jumlah_stok        = mysqli_real_escape_string($conn, $row[4] ?? 0);   // Kolom E: JUMLAH STOK
-                $no_rak             = mysqli_real_escape_string($conn, $row[5] ?? '');  // Kolom F: NOMOR RAK
-                $status_kondisi     = mysqli_real_escape_string($conn, $row[6] ?? '');  // Kolom G: STATUS KONDISI
-                $lokasi_penyimpanan = mysqli_real_escape_string($conn, $row[7] ?? '');  // Kolom H: LOKASI PENYIMPANAN
-                
-                // Tanda pengunci jenis kategori halaman otomatis menjadi stok
-                $jenis_kategori     = 'stok'; 
+             $nama_material      = mysqli_real_escape_string($conn, trim($row[2] ?? ''));
+$satuan             = mysqli_real_escape_string($conn, trim($row[3] ?? ''));
+$jumlah_stok        = (float)($row[4] ?? 0);
+$kategori_sub       = mysqli_real_escape_string($conn, trim($row[5] ?? ''));
+$no_rak             = mysqli_real_escape_string($conn, trim($row[0] ?? ''));
+$kondisi            = 'BAIK';
+$lokasi_penyimpanan = mysqli_real_escape_string($conn, trim($row[0] ?? ''));
+$jenis_kategori     = 'stok';
+
+// karena CSV tidak punya kolom kondisi
+$kondisi = "Baik";
+
+$jenis_kategori = "stok";
 
                 // Lewati baris jika nama material kosong
                 if (empty(trim($nama_material))) {
                     continue;
                 }
                 
-                // Query Insert Data menyesuaikan kolom database Anda
-                $query = "INSERT INTO material_gudang 
-                          (nama_material, keterangan, satuan, jumlah, no_rak, status, lokasi_penyimpanan, jenis_kategori) 
-                          VALUES 
-                          ('$nama_material', '$kategori_sub', '$satuan', '$jumlah_stok', '$no_rak', '$status_kondisi', '$lokasi_penyimpanan', '$jenis_kategori')";
-                          
-                if (mysqli_query($conn, $query)) {
-                    $sukses_insert++;
-                } else {
-                    $gagal_insert++;
-                }
-                $index++;
+                // Query Insert Data menyesuaikan kolom database
+                $query = "
+INSERT INTO material_gudang
+(
+    nama_material,
+    keterangan,
+    satuan,
+    jumlah,
+    no_rak,
+    kondisi,
+    lokasi_penyimpanan,
+    jenis_kategori
+)
+VALUES
+(
+    '$nama_material',
+    '$kategori_sub',
+    '$satuan',
+    '$jumlah_stok',
+    '$no_rak',
+    '$kondisi',
+    '$lokasi_penyimpanan',
+    '$jenis_kategori'
+)";
+
+if (mysqli_query($conn, $query)) {
+    $sukses_insert++;
+} else {
+    $gagal_insert++;
+    echo mysqli_error($conn) . "<br>";
+}
+
+$index++;
             }
             fclose($handle);
             
-            echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Stok! Gagal: $gagal_insert'); window.location='../kategori/stok.php';</script>";
+            echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Stok! Gagal: $gagal_insert'); window.location='../kategori/stok/stok.php'; </script>";
             exit;
         } else {
             echo "<script>alert('Gagal membuka file CSV.');</script>";
@@ -83,28 +107,34 @@ $res_stok = mysqli_fetch_assoc($q_stok);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>I-CALM | Import Stok</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --bg-body: #f4f7fc;
+            --bg-base: #f4f7fc;            
             --bg-card: #ffffff; 
-            --primary: #0284c7;       
+            --primary-brand: #0284c7;       
             --text-main: #0f172a;           
             --text-muted: #64748b;          
-            --border-color: rgba(148, 163, 184, 0.12);
-            --bg-sidebar: #d0e1f9; 
+            --border-glass: rgba(148, 163, 184, 0.15);
+            --bg-sidebar: #d0e1f9;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
 
-        /* SIDEBAR STYLING */
+        body { 
+            background: var(--bg-base); color: var(--text-main);
+            min-height: 100vh; overflow-x: hidden;
+        }
+
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
             background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15);
-            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column; overflow-y: auto;
+            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column;
         }
         .sidebar h3 { 
             font-size: 1.25rem; font-weight: 800; color: #1e3a8a; 
@@ -119,49 +149,47 @@ $res_stok = mysqli_fetch_assoc($q_stok);
             transition: all 0.2s ease-in-out;
         }
         
-        .sidebar a:hover, .dropdown-btn:hover { color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px); }
+        .sidebar a:hover, .dropdown-btn:hover { 
+            color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px);
+        }
+        
         .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
         .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
         
-        .sidebar .dropdown-btn.active { 
-            color: #ffffff !important; 
-            background: #0284c7 !important; 
-            font-weight: 700; 
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); 
-            border-radius: 10px; 
+        .sidebar .active-menu {
+            color: #ffffff !important; background: #0284c7 !important; font-weight: 700;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); border-radius: 10px; transform: translateX(4px);
         }
-        .sidebar .dropdown-btn.active i { color: #ffffff !important; }
-        
+        .sidebar .active-menu i { color: #ffffff !important; }
+
         .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
-        .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
+        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
+        .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
+        .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
         
+        .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
         .dropdown-container a { 
-            padding: 9px 14px; 
-            font-size: 0.85rem; 
-            color: #1e40af; 
-            font-weight: 600; 
-            background: rgba(255, 255, 255, 0.4); 
-            border-radius: 8px; 
-            margin-bottom: 5px; 
+            padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
         }
         .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
-        
-        .dropdown-container .active-sub { 
-            background: #ffffff !important; 
-            color: #0284c7 !important; 
-            font-weight: 700; 
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+
+        .sidebar .logout-button { 
+            margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; 
         }
-        
-        .sidebar .logout-button { margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; }
         .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
+        .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
 
-        .content { margin-left: 260px; position: relative; }
-        .navbar-custom { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
-        .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
-        .main-body-wrapper { padding: 40px; }
+        .content { margin-left: 260px; background: transparent; }
+        
+        .navbar-custom { 
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 18px 32px; border-bottom: 1px solid var(--border-glass); position: sticky; top: 0; z-index: 999;
+        }
+        .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.4rem; letter-spacing: -0.5px;}
 
-        .cyber-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 30px; }
+        .main-body-wrapper { padding: 40px 32px; }
+
+        .cyber-card { background: #ffffff; border: 1px solid var(--border-glass); border-radius: 16px; padding: 30px; }
         .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 8px; }
     </style>
 </head>
@@ -195,15 +223,15 @@ $res_stok = mysqli_fetch_assoc($q_stok);
     </div>
 
     <button class="dropdown-btn active">
-        <span class="menu-content-wrapper"><i class="fa-solid fa-file-excel menu-icon"></i><span>Import</span></span>
-        <i class="fa-solid fa-chevron-up dropdown-chevron"></i>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
+        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
-     <div class="dropdown-container" style="display: block;">
-        <a href="../import/material.php">Import Material</a>
-        <a href="../import/ba.php">Import BA</a>
-        <a href="../import/form_stok.php">Import Stok</a>
+    <div class="dropdown-container" style="display: block;">
+        <a href="material.php">Import Material</a>
+        <a href="ba.php">Import BA</a>
+        <a href="../import/form_stok.php" class="active-menu">Import Stok</a>
         <a href="../import/form_non_stok.php">Import Non Stok</a>
-        <a href="../import/form_non_po.php" class="active-menu">Import Non PO</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
         <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
         <a href="../import/form_pre_memory.php">Import Pre Memory</a>
         <a href="../import/form_peminjaman.php">Import Peminjaman</a>
@@ -214,6 +242,10 @@ $res_stok = mysqli_fetch_assoc($q_stok);
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-export menu-icon"></i><span>Export</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
+    <div class="dropdown-container">
+        <a href="../export/material_excel.php">Export Material</a>
+        <a href="../export/ba_excel.php">Export BA</a>
+    </div>
 
     <a href="../login/logout.php" class="logout-button"><span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span></a>
 </div>
@@ -255,7 +287,7 @@ $res_stok = mysqli_fetch_assoc($q_stok);
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <a href="../kategori/stok.php" class="btn btn-light w-100 fw-bold py-2" style="border-radius: 12px; border: 1px solid #cbd5e1;">
+                                <a href="../kategori/stok/stok.php" class="btn btn-light w-100 fw-bold py-2" style="border-radius: 12px; border: 1px solid #cbd5e1;">
                                     <i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Kategori
                                 </a>
                             </div>
@@ -279,23 +311,12 @@ $res_stok = mysqli_fetch_assoc($q_stok);
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const container = this.nextElementSibling;
-            const chevron = this.querySelector('.dropdown-chevron');
-            const currentDisplay = window.getComputedStyle(container).display;
+            this.classList.toggle('active');
             
-            if (currentDisplay === "block") {
+            if (window.getComputedStyle(container).display === "block") {
                 container.style.display = "none";
-                this.classList.remove('active');
-                if(chevron) {
-                    chevron.classList.remove('fa-chevron-up');
-                    chevron.classList.add('fa-chevron-down');
-                }
             } else {
                 container.style.display = "block";
-                this.classList.add('active');
-                if(chevron) {
-                    chevron.classList.remove('fa-chevron-down');
-                    chevron.classList.add('fa-chevron-up');
-                }
             }
         });
     });

@@ -32,6 +32,7 @@ if(isset($_POST['simpan'])){
     $asal_barang_vendor = mysqli_real_escape_string($conn, $_POST['asal_barang_vendor']);
     $tujuan             = mysqli_real_escape_string($conn, $_POST['tujuan']);
     $kondisi_material   = mysqli_real_escape_string($conn, $_POST['kondisi_material']);
+    $lokasi_penyimpanan = mysqli_real_escape_string($conn, $_POST['lokasi_penyimpanan']);
     $keterangan         = mysqli_real_escape_string($conn, $_POST['keterangan']);
 
     // -----------------------------------------------------------------
@@ -52,7 +53,7 @@ if(isset($_POST['simpan'])){
             throw new Exception("Nama Barang / Deskripsi Teknis wajib diisi!");
         }
 
-        // [PERBAIKAN 1] Cek data gudang wajib menyertakan JENIS KATEGORI agar tidak salah tumpuk/salah update
+        // Cek data gudang wajib menyertakan JENIS KATEGORI agar tidak salah tumpuk/salah update
         $cek_gudang = mysqli_query($conn, "
             SELECT *
             FROM material_gudang
@@ -64,9 +65,9 @@ if(isset($_POST['simpan'])){
         // STEP 1: Masukkan data log Berita Acara Baru ke database_ba
         $insert_ba = mysqli_query($conn, "
             INSERT INTO database_ba
-            (jenis_berita_acara, tanggal, jenis_kategori, kategori_material, nama_barang, merk_jenis, jenis_barang, sumber_barang, satuan, jumlah, no_seri, asal_barang_vendor, tujuan, kondisi_material, keterangan)
+            (jenis_berita_acara, tanggal, jenis_kategori, kategori_material, nama_barang, merk_jenis, jenis_barang, sumber_barang, satuan, jumlah, no_seri, asal_barang_vendor, tujuan, kondisi_material, lokasi_penyimpanan, keterangan)
             VALUES
-            ('$jenis_berita_acara', '$tanggal', '$jenis_kategori', '$kategori_material', '$nama_barang', '$merk_jenis', '$jenis_barang', '$sumber_barang', '$satuan', '$jumlah', '$no_seri', '$asal_barang_vendor', '$tujuan', '$kondisi_material', '$keterangan')
+            ('$jenis_berita_acara', '$tanggal', '$jenis_kategori', '$kategori_material', '$nama_barang', '$merk_jenis', '$jenis_barang', '$sumber_barang', '$satuan', '$jumlah', '$no_seri', '$asal_barang_vendor', '$tujuan', '$kondisi_material', '$lokasi_penyimpanan', '$keterangan')
         ");
 
         if (!$insert_ba) {
@@ -97,12 +98,13 @@ if(isset($_POST['simpan'])){
 
         // STEP 3: Daftarkan baru atau Update data di material_gudang
         if ($data_gudang) {
-            // [PERBAIKAN 2] Update data berdasarkan nama barang DAN jenis kategori secara spesifik
+            // Update data berdasarkan nama barang DAN jenis kategori secara spesifik
             $update_gudang = mysqli_query($conn, "
                 UPDATE material_gudang
                 SET
                     jumlah = '$stok_akhir_nyata',
                     kondisi = '$kondisi_material',
+                    lokasi_penyimpanan = '$lokasi_penyimpanan',
                     keterangan = 'Otomatis dari Registrasi BA'
                 WHERE LOWER(TRIM(nama_material)) = LOWER(TRIM('$nama_barang'))
                   AND LOWER(TRIM(jenis_kategori)) = LOWER(TRIM('$jenis_kategori'))
@@ -113,9 +115,9 @@ if(isset($_POST['simpan'])){
         } else {
             $insert_gudang = mysqli_query($conn, "
                 INSERT INTO material_gudang 
-                (nama_material, jumlah, jenis_kategori, kondisi, keterangan, sumber_data) 
+                (nama_material, jumlah, jenis_kategori, kondisi, lokasi_penyimpanan, keterangan, sumber_data) 
                 VALUES 
-                ('$nama_barang', '$stok_akhir_nyata', '$jenis_kategori', '$kondisi_material', 'Otomatis dari Registrasi BA', 'BA')
+                ('$nama_barang', '$stok_akhir_nyata', '$jenis_kategori', '$kondisi_material', '$lokasi_penyimpanan', 'Otomatis dari Registrasi BA', 'BA')
             ");
             if (!$insert_gudang) {
                 throw new Exception("Gagal mendaftarkan item baru ke gudang: " . mysqli_error($conn));
@@ -459,6 +461,11 @@ $daftar_material_gudang = mysqli_query($conn, "SELECT nama_material FROM materia
                             <option value="RUSAK">RUSAK</option>
                             <option value="PERBAIKAN">PERBAIKAN</option>
                         </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Lokasi Penyimpanan</label>
+                        <input type="text" name="lokasi_penyimpanan" class="form-control" placeholder="Contoh: Rak A, Blok B, Gudang Utama...">
                     </div>
 
                     <div class="col-12">

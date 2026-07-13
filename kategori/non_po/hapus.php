@@ -4,24 +4,17 @@ if(!isset($_SESSION['login'])){
     header("Location: ../login/index.php");
     exit;
 }
-include "../config/koneksi.php";
+include "../../config/koneksi.php";
 
-$id = $_GET['id'] ?? '';
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-if(!empty($id)){
-    // Melakukan query hapus data berdasarkan ID
-    $query = "DELETE FROM material_gudang WHERE id = '$id'";
-    
-    if(mysqli_query($conn, $query)){
-        echo "<script>
-                alert('Data berhasil dihapus!');
-                window.location.href = 'non_po.php';
-              </script>";
+if ($id > 0) {
+    $query = "DELETE FROM material_gudang WHERE id = $id";
+    if (mysqli_query($conn, $query)) {
+        header("Location: non_po.php");
+        exit;
     } else {
-        echo "<script>
-                alert('Gagal menghapus data: " . mysqli_error($conn) . "');
-                window.location.href = 'non_po.php';
-              </script>";
+        echo "<script>alert('Gagal menghapus data!'); window.location='non_po.php';</script>";
     }
 } else {
     header("Location: non_po.php");

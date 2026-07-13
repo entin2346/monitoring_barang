@@ -1,11 +1,9 @@
 <?php
 session_start();
 if(!isset($_SESSION['login'])){
-    // PERBAIKAN: Naik 2 tingkat ke folder login
-    header("Location: ../../login/index.php");
+    header("Location: /monitoring_barang/login/index.php");
     exit;
 }
-// PERBAIKAN: Naik 2 tingkat untuk mengambil file koneksi database
 include "../../config/koneksi.php";
 
 // Ambil parameter pencarian dan bersihkan bug '+' dari URL
@@ -32,7 +30,7 @@ $offset = ($page - 1) * $limit;
 
 // Hitung total item hasil filter
 $total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM material_gudang WHERE $whereClause");
-$total_data = mysqli_fetch_assoc($total_query)['total'];
+$total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
 $total_halaman = ceil($total_data / $limit);
 
 // Hitung akumulasi volume stok khusus Pemakaian
@@ -48,7 +46,7 @@ $query = mysqli_query($conn, "
 ");
 
 if(!$query){
-    die(mysqli_error($conn));
+    die("Query Gagal: " . mysqli_error($conn));
 }
 ?>
 
@@ -141,10 +139,7 @@ if(!$query){
         .stat-number { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0; }
 
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
-        .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
-        .input-cyber-group input { background: transparent !important; border: none !important; color: var(--text-main) !important; padding: 12px 18px; }
-        .input-cyber-group .input-group-text { background: transparent; border: none; color: #64748b; padding-left: 18px; }
-
+        
         /* SCROLLABLE TABLE CSS */
         .cyber-table-wrapper { 
             border: 1px solid var(--border-color); 
@@ -183,7 +178,7 @@ if(!$query){
 <div class="sidebar">
     <h3><i class="fa-solid fa-bolt text-primary"></i> I-CALM Panel</h3>
     
-    <a href="../../dashboard/index.php">
+    <a href="/monitoring_barang/dashboard/index.php">
         <span class="menu-content-wrapper"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></span>
     </a>
     
@@ -192,8 +187,8 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../../material/index.php">Material Gudang</a>
-        <a href="../../ba/index.php">Database BA</a>
+        <a href="/monitoring_barang/material/index.php">Material Gudang</a>
+        <a href="/monitoring_barang/ba/index.php">Database BA</a>
     </div>
 
     <button class="dropdown-btn active">
@@ -201,13 +196,13 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container" style="display: block;">
-        <a href="../stok/stok.php">Stok</a>
-        <a href="../non_stok/non_stok.php">Non Stok</a>
-        <a href="../non_po/non_po.php">Non PO</a>
-        <a href="../ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../pre_memory/pre_memory.php">Pre Memory</a>
-        <a href="../peminjaman/peminjaman.php">Peminjaman</a>
-        <a href="pemakaian.php" class="active-menu">Pemakaian</a>
+        <a href="/monitoring_barang/kategori/stok/stok.php">Stok</a>
+        <a href="/monitoring_barang/kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="/monitoring_barang/kategori/non_po/non_po.php">Non PO</a>
+        <a href="/monitoring_barang/kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="/monitoring_barang/kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="/monitoring_barang/kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="/monitoring_barang/kategori/pemakaian/pemakaian.php" class="active-menu">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -215,15 +210,15 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../../import/material.php">Import Material</a>
-        <a href="../../import/ba.php">Import BA</a>
-        <a href="../../import/form_stok.php">Import Stok</a>
-        <a href="../../import/form_non_stok.php">Import Non Stok</a>
-        <a href="../../import/form_non_po.php">Import Non PO</a>
-        <a href="../../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="../../import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="../../import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="../../import/form_pemakaian.php">Import Pemakaian</a>
+        <a href="/monitoring_barang/import/material.php">Import Material</a>
+        <a href="/monitoring_barang/import/ba.php">Import BA</a>
+        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
+        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
+        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
+        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -231,11 +226,11 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../../export/material_excel.php">Export Material</a>
-        <a href="../../export/ba_excel.php">Export BA</a>
+        <a href="/monitoring_barang/export/material_excel.php">Export Material</a>
+        <a href="/monitoring_barang/export/ba_excel.php">Export BA</a>
     </div>
     
-    <a href="../../login/logout.php" class="logout-button">
+    <a href="/monitoring_barang/login/logout.php" class="logout-button">
         <span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span>
     </a>
 </div>
@@ -255,26 +250,33 @@ if(!$query){
             <div class="col-md-6">
                 <div class="glass-stat-card">
                     <div class="stat-label">Total Jenis Material Pemakaian</div>
-                    <div class="stat-number"><?= number_format($total_data); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Item</span></div>
+                    <div class="stat-number"><?= number_format((float)$total_data); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Item</span></div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="glass-stat-card" style="border-left-color: #10b981;">
                     <div class="stat-label">Volume Akumulasi Terpakai</div>
-                    <div class="stat-number" style="color: #10b981;"><?= number_format($total_stok); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
+                    <div class="stat-number" style="color: #10b981;"><?= number_format((float)$total_stok); ?> <span class="fw-normal text-muted" style="font-size: 1.1rem;">Unit</span></div>
                 </div>
             </div>
         </div>
 
-        <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center">
-            <form method="GET" class="w-70 me-3" style="flex: 1;">
-                <div class="input-group input-cyber-group">
-                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" name="cari" class="form-control" autocomplete="off" placeholder="Cari material khusus Pemakaian..." value="<?= htmlspecialchars($cari_clean); ?>">
-                    <button type="submit" class="btn btn-primary px-4 fw-bold">Saring</button>
+        <!-- Bagian Input Saring & Tambah Sesuai Ukuran Gambar -->
+        <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
+            <form method="GET" class="d-flex gap-2" style="flex: 1;">
+                <div class="input-group" style="flex: 1;">
+                    <span class="input-group-text bg-white border-end-0 px-3" style="border-radius: 12px 0 0 12px; border-color: #cbd5e1; height: 46px; color: #64748b;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" name="cari" class="form-control border-start-0 ps-1 pr-3" autocomplete="off" placeholder="Cari material khusus Pemakaian..." value="<?= htmlspecialchars($cari_clean); ?>" style="border-radius: 0 12px 12px 0; border-color: #cbd5e1; height: 46px; background-color: #fff;">
                 </div>
+                <button type="submit" class="btn btn-primary px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #0d6efd; border: none; height: 46px; white-space: nowrap;">
+                    <i class="fa-solid fa-sliders"></i> Saring
+                </button>
             </form>
-            <a href="tambah.php" class="btn btn-success fw-bold py-2 px-4" style="border-radius:12px;"><i class="fa-solid fa-plus me-2"></i>Tambah Data</a>
+            <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #059669; border: none; height: 46px; white-space: nowrap;">
+                <i class="fa-solid fa-plus"></i> Tambah
+            </a>
         </div>
 
         <div class="cyber-table-wrapper mb-4">
@@ -282,12 +284,12 @@ if(!$query){
                 <thead>
                     <tr>
                         <th width="60" class="text-center">NO</th>
-                        <th width="100">AKSI</th>
                         <th>NAMA MATERIAL GUDANG</th>
                         <th>KATEGORI</th>
                         <th>SATUAN</th>
                         <th>JUMLAH TERPAKAI</th>
                         <th>NOMOR RAK</th>
+                        <th width="120" class="text-center">AKSI</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -298,18 +300,18 @@ if(!$query){
                     ?>
                     <tr>
                         <td class="text-center"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white"><i class="fa-solid fa-eye"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white"><i class="fa-solid fa-pen"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
-                            </div>
-                        </td>
                         <td class="fw-bold"><?= htmlspecialchars($d['nama_material'] ?? ''); ?></td>
                         <td><?= htmlspecialchars($d['jenis_kategori'] ?? 'Pemakaian'); ?></td>
                         <td><?= htmlspecialchars($d['satuan'] ?? ''); ?></td>
-                        <td><span class="neon-badge-stock"><?= number_format((int)($d['jumlah'] ?? 0)); ?></span></td>
+                        <td><span class="neon-badge-stock"><?= number_format((float)($d['jumlah'] ?? 0)); ?></span></td>
                         <td><?= htmlspecialchars($d['no_rak'] ?? $d['sumber_barang'] ?? '-'); ?></td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail"><i class="fa-solid fa-eye"></i></a>
+                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa-solid fa-pen"></i></a>
+                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
+                            </div>
+                        </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

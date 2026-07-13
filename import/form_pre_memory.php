@@ -9,85 +9,119 @@ if(!isset($_SESSION['login'])){
 
 include "../config/koneksi.php";
 
-// 2. PROSES BACKEND CSV PRE MEMORY
+// ======================================================
+// PROSES IMPORT CSV PRE MEMORY
+// ======================================================
 if (isset($_POST['submit_import'])) {
-    if (isset($_FILES['file_csv']) && $_FILES['file_csv']['error'] == 0) {
-        
-        $filename = $_FILES['file_csv']['tmp_name'];
-        
-        if (($handle = fopen($filename, "r")) !== FALSE) {
-            
-            $sukses_insert = 0;
-            $gagal_insert = 0;
-            $index = 0;
-            
-            while (($row = fgetcsv($handle, 10000, ",")) !== FALSE) {
-                
-                // Lewati baris jika seluruh isi barisnya kosong
-                if (empty(array_filter($row))) {
-                    continue;
-                }
-                
-                // PERBAIKAN UTAMA: Jika kolom pertama teksnya adalah 'no' atau kosong, langsung lewati (jangan jadikan data)
-                $kolom_pertama = isset($row[0]) ? strtolower(trim($row[0])) : '';
-                if ($kolom_pertama == 'no' || $kolom_pertama == '') {
-                    $index++;
-                    continue;
-                }
-                
-                // PEMETAAN KOLOM CSV SESUAI FILE ASLI ANDA:
-                // Kolom A ($row[0]) = NO
-                // Kolom B ($row[1]) = Material Description
-                // Kolom C ($row[2]) = Satuan
-                // Kolom D ($row[3]) = Jumlah
-                // Kolom E ($row[4]) = Lokasi Penyimpanan
-                
-                $nama_material      = mysqli_real_escape_string($conn, $row[1] ?? '');  
-                $description        = ''; 
-                $satuan             = mysqli_real_escape_string($conn, $row[2] ?? '');  
-                
-                // Bersihkan karakter titik ribuan dari CSV agar tersimpan sebagai angka murni di DB
-                $raw_jumlah         = $row[3] ?? '0';
-                $jumlah             = (int)str_replace('.', '', $raw_jumlah); 
-                
-                // Pemetaan yang benar untuk kolom LOKASI PENYIMPANAN ada di indeks array 4 ($row[4])
-                $lokasi_penyimpanan = mysqli_real_escape_string($conn, $row[4] ?? '');  
-                
-                // Tanda pengunci jenis kategori halaman otomatis menjadi pre_memory
-                $jenis_kategori     = 'pre_memory'; 
 
-                // Lewati baris jika nama material kosong atau bernilai "material description" (proteksi ganda header)
-                if (empty(trim($nama_material)) || strtolower(trim($nama_material)) == 'material description') {
-                    continue;
-                }
-                
-                // Query Insert Data menyesuaikan dengan kolom lokasi_penyimpanan di database Anda
-                $query = "INSERT INTO material_gudang 
-                          (nama_material, keterangan, satuan, jumlah, lokasi_penyimpanan, jenis_kategori) 
-                          VALUES 
-                          ('$nama_material', '$description', '$satuan', '$jumlah', '$lokasi_penyimpanan', '$jenis_kategori')";
-                          
-                if (mysqli_query($conn, $query)) {
-                    $sukses_insert++;
-                } else {
-                    $gagal_insert++;
-                }
-                $index++;
-            }
-            fclose($handle);
-            
-            echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Pre Memory! Gagal: $gagal_insert'); window.location='../kategori/pre_memory.php';</script>";
-            exit;
-        } else {
-            echo "<script>alert('Gagal membuka file CSV.');</script>";
-        }
+    if (!isset($_FILES['file_csv']) || $_FILES['file_csv']['error'] != 0) {
+        echo "<script>alert('File gagal diupload!');</script>";
     } else {
-        echo "<script>alert('Terjadi kesalahan upload file.');</script>";
+
+        // Validasi ekstensi
+        $ext = strtolower(pathinfo($_FILES['file_csv']['name'], PATHINFO_EXTENSION));
+
+        if ($ext != "csv") {
+            echo "<script>alert('File harus berformat CSV!');</script>";
+        } else {
+
+            // Maksimal 5 MB
+            if ($_FILES['file_csv']['size'] > 5 * 1024 * 1024) {
+                echo "<script>alert('Ukuran file maksimal 5 MB');</script>";
+            } else {
+
+                $handle = fopen($_FILES['file_csv']['tmp_name'], "r");
+
+                if ($handle) {
+
+                    $sukses_insert = 0;
+                    $gagal_insert  = 0;
+
+                    // Prepared Statement
+                    $stmt = mysqli_prepare(
+                        $conn,
+                        "INSERT INTO material_gudang
+                        (nama_material, satuan, jumlah, lokasi_penyimpanan, jenis_kategori)
+                        VALUES (?,?,?,?,?)"
+                    );
+
+                    if (!$stmt) {
+                        die("Prepare gagal: " . mysqli_error($conn));
+                    }
+
+                    while (($row = fgetcsv($handle, 10000, ",")) !== FALSE) {
+
+                        // Lewati baris kosong
+                        if (empty(array_filter($row))) {
+                            continue;
+                        }
+
+                        $no = trim($row[0] ?? '');
+
+                        // Lewati header
+                        if (strtolower($no) == "no" || $no == "") {
+                            continue;
+                        }
+
+                        $nama_material = trim($row[1] ?? '');
+
+                        if ($nama_material == "" || strtolower($nama_material) == "material description") {
+                            continue;
+                        }
+
+                        $satuan = trim($row[2] ?? '');
+
+                        $raw_jumlah = str_replace('.', '', trim($row[3] ?? '0'));
+                        $jumlah = is_numeric($raw_jumlah) ? (int)$raw_jumlah : 0;
+
+                        $lokasi = trim($row[4] ?? '');
+
+                        $jenis_kategori = 'pre_memory';
+
+                        mysqli_stmt_bind_param(
+                            $stmt,
+                            "ssiss",
+                            $nama_material,
+                            $satuan,
+                            $jumlah,
+                            $lokasi,
+                            $jenis_kategori
+                        );
+
+                        if (mysqli_stmt_execute($stmt)) {
+                            $sukses_insert++;
+                        } else {
+                            $gagal_insert++;
+                        }
+                    }
+
+                    fclose($handle);
+                    mysqli_stmt_close($stmt);
+
+                    // Menampilkan notifikasi hasil import lalu redirect ke halaman kategori pre_memory
+                    echo "<script>
+                    alert('Import selesai.\\nBerhasil : $sukses_insert data\\nGagal : $gagal_insert data');
+                    window.location='../kategori/pre_memory/pre_memory.php';
+                    </script>";
+
+                    exit;
+
+                } else {
+
+                    echo "<script>alert('File CSV tidak dapat dibuka');</script>";
+
+                }
+
+            }
+
+        }
+
     }
+
 }
 
 // 3. AMBIL STATISTIK UNTUK TAMPILAN INFORMASI HALAMAN PRE MEMORY
-$q_pre_memory = mysqli_query($conn, "SELECT COUNT(*) as total_pre_memory FROM material_gudang WHERE jenis_kategori = 'pre_memory'");
+$q_pre_memory = mysqli_query($conn, "SELECT COUNT(*) as total_pre_memory FROM pre_memory");
 $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
 ?>
 <!DOCTYPE html>
@@ -97,28 +131,28 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>I-CALM | Import Pre Memory</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --bg-body: #f4f7fc;
+            --bg-base: #f4f7fc;
             --bg-card: #ffffff; 
-            --primary: #0284c7;       
+            --primary-brand: #0284c7;       
             --text-main: #0f172a;           
             --text-muted: #64748b;          
-            --border-color: rgba(148, 163, 184, 0.12);
+            --border-glass: rgba(148, 163, 184, 0.15);
             --bg-sidebar: #d0e1f9; 
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+        body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 
         /* SIDEBAR STYLING */
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
             background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15);
-            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column; overflow-y: auto;
+            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column;
         }
         .sidebar h3 { 
             font-size: 1.25rem; font-weight: 800; color: #1e3a8a; 
@@ -133,28 +167,30 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
             transition: all 0.2s ease-in-out;
         }
         
-        .sidebar a:hover, .dropdown-btn:hover { color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px); }
+        .sidebar a:hover, .dropdown-btn:hover { 
+            color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px); 
+        }
         .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
         .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
         
-        .sidebar .dropdown-btn.active { 
-            color: #ffffff !important; 
-            background: #0284c7 !important; 
-            font-weight: 700; 
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); 
-            border-radius: 10px; 
+        .sidebar .active-menu {
+            color: #ffffff !important; background: #0284c7 !important; font-weight: 700;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); border-radius: 10px; transform: translateX(4px);
         }
-        .sidebar .dropdown-btn.active i { color: #ffffff !important; }
-        
+        .sidebar .active-menu i { color: #ffffff !important; }
+
         .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
-        .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
+        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
+        .dropdown-btn.active { color: #ffffff !important; background: #0284c7 !important; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); }
+        .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
         
+        .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
         .dropdown-container a { 
             padding: 9px 14px; 
             font-size: 0.85rem; 
             color: #1e40af; 
             font-weight: 600; 
-            background: rgba(255, 255, 255, 0.4); 
+            background: rgba(255, 255, 255, 0.3); 
             border-radius: 8px; 
             margin-bottom: 5px; 
         }
@@ -163,24 +199,23 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
             color: #0284c7; 
         }
         
-        .dropdown-container .active-sub { 
-            background: #ffffff !important; 
-            color: #0284c7 !important; 
-            font-weight: 700; 
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        .sidebar .logout-button { 
+            margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; 
         }
-        
-        .sidebar .logout-button { margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; }
         .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
+        .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
 
         /* MAIN CONTENT STYLING */
-        .content { margin-left: 260px; position: relative; }
-        .navbar-custom { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
-        .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
-        .main-body-wrapper { padding: 40px; }
+        .content { margin-left: 260px; background: transparent; }
+        .navbar-custom { 
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 18px 32px; border-bottom: 1px solid var(--border-glass); position: sticky; top: 0; z-index: 999; 
+        }
+        .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.4rem; letter-spacing: -0.5px; }
+        .main-body-wrapper { padding: 40px 32px; }
 
         /* CARD STYLING */
-        .cyber-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 30px; }
+        .cyber-card { background: #ffffff; border: 1px solid var(--border-glass); border-radius: 16px; padding: 30px; }
         .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 8px; }
     </style>
 </head>
@@ -214,17 +249,17 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
     </div>
 
     <button class="dropdown-btn active">
-        <span class="menu-content-wrapper"><i class="fa-solid fa-file-excel menu-icon"></i><span>Import</span></span>
-        <i class="fa-solid fa-chevron-up dropdown-chevron"></i>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
+        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
      <div class="dropdown-container" style="display: block;">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
         <a href="../import/form_stok.php">Import Stok</a>
         <a href="../import/form_non_stok.php">Import Non Stok</a>
-        <a href="../import/form_non_po.php" class="active-menu">Import Non PO</a>
+        <a href="../import/form_non_po.php">Import Non PO</a>
         <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="../import/form_pre_memory.php" class="active-menu">Import Pre Memory</a>
         <a href="../import/form_peminjaman.php">Import Peminjaman</a>
         <a href="../import/form_pemakaian.php">Import Pemakaian</a>
     </div>
@@ -233,6 +268,10 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-export menu-icon"></i><span>Export</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
+    <div class="dropdown-container">
+        <a href="../export/material_excel.php">Export Material</a>
+        <a href="../export/ba_excel.php">Export BA</a>
+    </div>
 
     <a href="../login/logout.php" class="logout-button"><span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span></a>
 </div>
@@ -255,7 +294,7 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
                             <i class="fa-solid fa-upload text-primary me-2"></i> Import CSV - Pre Memory
                         </h5>
                         <span class="badge bg-info text-dark fw-bold px-3 py-2" style="border-radius: 8px;">
-                            Total Data: <?= number_format($res_pre_memory['total_pre_memory']); ?> Item
+                            Total Data: <?= number_format($res_pre_memory['total_pre_memory'] ?? 0); ?> Item
                         </span>
                     </div>
 
@@ -274,7 +313,7 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <a href="../kategori/pre_memory.php" class="btn btn-light w-100 fw-bold py-2" style="border-radius: 12px; border: 1px solid #cbd5e1;">
+                                <a href="../kategori/pre_memory/pre_memory.php" class="btn btn-light w-100 fw-bold py-2" style="border-radius: 12px; border: 1px solid #cbd5e1;">
                                     <i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Kategori
                                 </a>
                             </div>
@@ -297,25 +336,13 @@ $res_pre_memory = mysqli_fetch_assoc($q_pre_memory);
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            
             const container = this.nextElementSibling;
-            const chevron = this.querySelector('.dropdown-chevron');
-            const currentDisplay = window.getComputedStyle(container).display;
+            this.classList.toggle('active');
             
-            if (currentDisplay === "block") {
+            if (window.getComputedStyle(container).display === "block") {
                 container.style.display = "none";
-                this.classList.remove('active');
-                if(chevron) {
-                    chevron.classList.remove('fa-chevron-up');
-                    chevron.classList.add('fa-chevron-down');
-                }
             } else {
                 container.style.display = "block";
-                this.classList.add('active');
-                if(chevron) {
-                    chevron.classList.remove('fa-chevron-down');
-                    chevron.classList.add('fa-chevron-up');
-                }
             }
         });
     });

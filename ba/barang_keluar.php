@@ -70,7 +70,7 @@ $query = mysqli_query($conn,"
         overflow-x: hidden;
     }
 
-    /* SIDEBAR PANEL ARSITEKTUR (MENGIKUTI INDEX.PHP) */
+    /* SIDEBAR PANEL ARSITEKTUR */
     .sidebar {
         position: fixed; left: 0; top: 0; width: 260px; height: 100%;
         background-color: var(--bg-sidebar);
@@ -136,7 +136,7 @@ $query = mysqli_query($conn,"
         padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999;
     }
 
-    /* JUDUL MATERIAL KELUAR YANG SUPER TEBAL & MENCOLOK */
+    /* JUDUL MATERIAL KELUAR */
     .brand-mencolok-keluar {
         font-weight: 800 !important;
         font-size: 1.3rem !important;
@@ -147,9 +147,9 @@ $query = mysqli_query($conn,"
         text-shadow: 0px 2px 10px rgba(239, 68, 68, 0.15);
     }
     
-    /* TOMBOL KEMBALI WARNA BIRU MENCOLOK */
-    .btn-kembali-biru {
-        background: linear-gradient(135deg, #0284c7, #2563eb) !important;
+    /* TOMBOL KEMBALI WARNA MERAH */
+    .btn-kembali-merah {
+        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
         color: #ffffff !important;
         font-weight: 800 !important;
         font-size: 0.85rem !important;
@@ -158,19 +158,19 @@ $query = mysqli_query($conn,"
         padding: 10px 24px !important;
         border: none !important;
         border-radius: 30px !important;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: inline-flex;
         align-items: center;
         gap: 8px;
         text-decoration: none;
     }
-    .btn-kembali-biru:hover {
+    .btn-kembali-merah:hover {
         transform: translateY(-2px) scale(1.03);
-        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55) !important;
-        background: linear-gradient(135deg, #0369a1, #1d4ed8) !important;
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5) !important;
+        background: linear-gradient(135deg, #b91c1c, #991b1b) !important;
     }
-    .btn-kembali-biru:active {
+    .btn-kembali-merah:active {
         transform: translateY(1px);
     }
 
@@ -193,30 +193,53 @@ $query = mysqli_query($conn,"
         box-shadow: 0 4px 16px rgba(0,0,0,0.02); overflow-x: auto; width: 100%;
     }
     
-    /* GAYA TABEL */
-    .table-cyber { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
-    .table-cyber thead th { 
-        background: #f8fafc !important; color: var(--text-muted) !important; 
-        font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.3px; 
-        padding: 16px 20px; 
-        border-bottom: 1px solid var(--border-color); white-space: nowrap;
+    /* STRUKTUR TABEL PRESISI DAN RAPAT */
+    .table-cyber { 
+        width: 100%; 
+        border-collapse: separate; 
+        border-spacing: 0; 
+        margin: 0;
+        table-layout: fixed; 
     }
-    .table-cyber tbody tr:hover { background-color: #f8fafc !important; }
+    .table-cyber thead th, 
     .table-cyber tbody td { 
-        padding: 15px 20px !important; 
-        font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; 
-        border-bottom: 1px solid #f1f5f9;
-        white-space: nowrap; 
-    }
-
-    /* PENGATURAN TEKS KREATIVE WRAPPING */
-    .col-text-wrap {
+        padding: 12px 10px !important; 
+        font-size: 0.85rem; 
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: normal !important; 
         word-break: break-word;
-        min-width: 250px !important; max-width: 330px !important;
     }
-    .col-nowrap {
-        white-space: nowrap !important;
+    .table-cyber tbody tr:hover { background-color: #f8fafc !important; }
+    .table-cyber tbody td { border-bottom: 1px solid #f1f5f9; }
+
+    /* LEBAR PRESISI PER KOLOM */
+    .table-cyber th:nth-child(1), .table-cyber td:nth-child(1) { width: 50px; text-align: center; } 
+    .table-cyber th:nth-child(2), .table-cyber td:nth-child(2) { width: 110px; } 
+    .table-cyber th:nth-child(3), .table-cyber td:nth-child(3) { width: 180px; } 
+    .table-cyber th:nth-child(4), .table-cyber td:nth-child(4) { width: 120px; } 
+    .table-cyber th:nth-child(5), .table-cyber td:nth-child(5) { width: 120px; } 
+    .table-cyber th:nth-child(6), .table-cyber td:nth-child(6) { width: 140px; } 
+    .table-cyber th:nth-child(7), .table-cyber td:nth-child(7) { width: 80px; text-align: center; }  
+    .table-cyber th:nth-child(8), .table-cyber td:nth-child(8) { width: 95px; text-align: center; }  
+    .table-cyber th:nth-child(9), .table-cyber td:nth-child(9) { width: 130px; } 
+    .table-cyber th:nth-child(10), .table-cyber td:nth-child(10) { width: 180px; } 
+    .table-cyber th:nth-child(11), .table-cyber td:nth-child(11) { width: 140px; } 
+    .table-cyber th:nth-child(12), .table-cyber td:nth-child(12) { width: 150px; } 
+
+    /* PIL KAPSUL JUMLAH WARNA MERAH GLOWING */
+    .badge-jumlah-merah {
+        display: inline-block;
+        background: #ef4444 !important; 
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 0.85rem !important;
+        padding: 4px 16px !important;
+        border-radius: 50px !important; 
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.45) !important; 
+        text-align: center;
+        min-width: 45px;
     }
 </style>
 </head>
@@ -305,7 +328,7 @@ $query = mysqli_query($conn,"
                 <i class="fa-solid fa-square-minus me-2" style="color: #ef4444; -webkit-text-fill-color: initial;"></i> MATERIAL KELUAR
             </span>
             
-            <a href="index.php" class="btn btn-kembali-biru">
+            <a href="index.php" class="btn btn-kembali-merah">
                 <i class="fa-solid fa-chevron-left"></i> Kembali
             </a>
         </div>
@@ -323,7 +346,7 @@ $query = mysqli_query($conn,"
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-dark fw-bold w-100" style="border-radius: 12px; background: #0f172a; border: none; height: 100%; font-size: 0.9rem;">
+                        <button type="submit" class="btn btn-primary fw-bold w-100" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height: 100%; font-size: 0.9rem;">
                             Cari
                         </button>
                     </div>
@@ -335,17 +358,17 @@ $query = mysqli_query($conn,"
             <table class="table-cyber">
                 <thead>
                     <tr>
-                        <th width="70" class="text-center">NO</th>
+                        <th class="text-center">NO</th>
                         <th>TANGGAL RECORD</th>
-                        <th class="col-text-wrap">NAMA MATERIAL</th>
+                        <th>NAMA MATERIAL</th>
                         <th>MERK / JENIS</th>
                         <th>JENIS MATERIAL</th>
-                        <th class="col-text-wrap">SUMBER MATERIAL</th>
+                        <th>SUMBER MATERIAL</th>
                         <th class="text-center">SATUAN</th>
                         <th class="text-center">JUMLAH</th>
                         <th>NO SERI</th>
                         <th>PEMASOK/VENDOR</th>
-                        <th class="text-center">KATEGORI MATERIAL</th>
+                        <th>KATEGORI MATERIAL</th>
                         <th>KETERANGAN</th>
                     </tr>
                 </thead>
@@ -356,18 +379,27 @@ $query = mysqli_query($conn,"
                         while($d = mysqli_fetch_assoc($query)){
                     ?>
                     <tr>
-                        <td class="text-center fw-bold col-nowrap" style="color: var(--text-muted) !important; font-size:0.85rem;"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
-                        <td class="col-nowrap fw-semibold text-muted"><i class="fa-regular fa-calendar me-1" style="font-size: 0.75rem;"></i> <?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
-                        <td class="fw-bold text-dark col-text-wrap"><?= htmlspecialchars($d['nama_barang'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['merk_jenis'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['jenis_barang'] ?? ''); ?></td>
-                        <td class="col-text-wrap text-muted"><?= htmlspecialchars($d['sumber_barang'] ?? ''); ?></td>
-                        <td class="text-center col-nowrap"><span class="badge bg-light text-secondary border px-2 py-1" style="border-radius:6px; font-size:0.75rem; font-weight:600;"><?= htmlspecialchars($d['satuan'] ?? ''); ?></span></td>
-                        <td class="text-center col-nowrap fw-bold text-danger" style="font-size:0.85rem;"><?= number_format($d['jumlah'] ?? 0); ?></td>
-                        <td class="fw-bold text-primary" style="font-family: monospace; font-size: 0.9rem;"><?= htmlspecialchars($d['no_seri'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['asal_barang_vendor'] ?? ''); ?></td>
-                        <td class="text-center col-nowrap"><span class="badge bg-danger-subtle text-danger border-0 px-2 py-1" style="border-radius:6px; font-size:0.75rem; font-weight:600;"><?= htmlspecialchars($d['kategori_material'] ?? ''); ?></span></td>
-                        <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted)" title="<?= htmlspecialchars($d['keterangan'] ?? ''); ?>"><?= htmlspecialchars($d['keterangan'] ?? ''); ?></td>
+                        <td class="text-center fw-bold" style="color: var(--text-muted) !important; font-size:0.85rem;"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
+                        <td class="fw-semibold text-muted"><i class="fa-regular fa-calendar me-1" style="font-size: 0.75rem;"></i> <?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
+                        <td class="fw-bold text-dark"><?= htmlspecialchars(strtoupper($d['nama_barang'] ?? '')); ?></td>
+                        <td><?= htmlspecialchars(strtoupper($d['merk_jenis'] ?? '')); ?></td>
+                        <td><?= htmlspecialchars(strtoupper($d['jenis_barang'] ?? '')); ?></td>
+                        <td class="text-muted"><?= htmlspecialchars(strtoupper($d['sumber_barang'] ?? '')); ?></td>
+                        <td class="text-center"><span class="badge bg-light text-secondary border px-2 py-1" style="border-radius:6px; font-size:0.75rem; font-weight:600;"><?= htmlspecialchars(strtoupper($d['satuan'] ?? '')); ?></span></td>
+                        
+                        <td class="text-center">
+                            <span class="badge-jumlah-merah"><?= number_format($d['jumlah'] ?? 0); ?></span>
+                        </td>
+                        
+                        <td class="fw-bold text-primary" style="font-family: monospace; font-size: 0.9rem;"><?= htmlspecialchars(strtoupper($d['no_seri'] ?? '')); ?></td>
+                        <td><?= htmlspecialchars(strtoupper($d['asal_barang_vendor'] ?? '')); ?></td>
+                        
+                        <!-- Class text-center sudah dihilangkan, sekarang rata kiri otomatis -->
+                        <td class="fw-normal text-dark" style="font-size:0.85rem;">
+                            <?= htmlspecialchars(strtoupper($d['kategori_material'] ?? '')); ?>
+                        </td>
+                        
+                        <td class="text-muted" title="<?= htmlspecialchars($d['keterangan'] ?? ''); ?>"><?= htmlspecialchars(strtoupper($d['keterangan'] ?? '')); ?></td>
                     </tr>
                     <?php 
                         }
@@ -384,7 +416,7 @@ $query = mysqli_query($conn,"
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    /* TOGGLE DROP DOWN CONTROLLER (MENGIKUTI INDEX.PHP) */
+    /* TOGGLE DROP DOWN CONTROLLER */
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();

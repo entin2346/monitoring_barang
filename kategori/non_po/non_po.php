@@ -4,22 +4,23 @@ if(!isset($_SESSION['login'])){
     header("Location: ../login/index.php");
     exit;
 }
-include "../config/koneksi.php";
+include "../../config/koneksi.php";
 
 // Ambil parameter pencarian dan bersihkan bug '+' dari URL
 $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
 // KUNCI FILTER: Hanya menarik data kategori NON PO
-$whereClause = "(jenis_kategori LIKE '%non%po%')";
-if ($cari_clean !== '') {
-$whereClause .= " AND (
-    nama_material LIKE '%$cari_clean%' OR
-    merk_jenis LIKE '%$cari_clean%' OR
-    vendor LIKE '%$cari_clean%' OR
-    tujuan LIKE '%$cari_clean%' OR
-    sumber_barang LIKE '%$cari_clean%'
-)";
+$whereClause = "1=1";
+
+if($cari_clean!=''){
+    $whereClause .= " AND (
+        nama_material LIKE '%$cari_clean%' OR
+        merk_jenis LIKE '%$cari_clean%' OR
+        asal_vendor LIKE '%$cari_clean%' OR
+        tujuan LIKE '%$cari_clean%' OR
+        sumber_barang LIKE '%$cari_clean%'
+    )";
 }
 
 // Fitur Mutasi Halaman (Pagination)
@@ -29,20 +30,21 @@ if($page < 1){ $page = 1; }
 $offset = ($page - 1) * $limit;
 
 // Hitung total item hasil filter
-$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM material_gudang WHERE $whereClause");
-$total_data = mysqli_fetch_assoc($total_query)['total'];
+$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM non_po WHERE $whereClause");
+$total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
 $total_halaman = ceil($total_data / $limit);
 
 // Hitung akumulasi volume stok khusus Non PO
-$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM material_gudang WHERE $whereClause");
+$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM non_po WHERE $whereClause");
 $total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
 // Ambil data dari database dengan pengurutan No Rak khusus
-$query = mysqli_query($conn, "
-    SELECT * FROM material_gudang 
-    WHERE $whereClause 
-   ORDER BY tanggal DESC, nama_material ASC
-    LIMIT $offset, $limit
+$query = mysqli_query($conn,"
+SELECT *
+FROM non_po
+WHERE $whereClause
+ORDER BY tanggal DESC,nama_material ASC
+LIMIT $offset,$limit
 ");
 
 if(!$query){
@@ -77,9 +79,16 @@ if(!$query){
         ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+        
+        /* FIX: Ubah overflow-x dari hidden menjadi auto agar halaman luar bisa fleksibel di mobile */
+        body { 
+            background: var(--bg-body); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
 
-        /* SIDEBAR STYLE SESUAI DENGAN INDEX.PHP DASHBOARD */
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
             background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15);
@@ -120,6 +129,7 @@ if(!$query){
         .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
         .dropdown-container a { 
             padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
+            border-radius: 8px; margin-bottom: 3px;
         }
         .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
 
@@ -127,7 +137,8 @@ if(!$query){
         .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
         .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
 
-        .content { margin-left: 260px; position: relative; }
+        /* FIX: Set min-width agar konten utama tidak remuk saat layar diperkecil */
+        .content { margin-left: 260px; position: relative; min-width: 320px; }
         .navbar-custom { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
         .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
         .main-body-wrapper { padding: 40px; }
@@ -137,18 +148,33 @@ if(!$query){
         .stat-number { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0; }
 
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
-        .input-cyber-group { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
-        .input-cyber-group input { background: transparent !important; border: none !important; color: var(--text-main) !important; padding: 12px 18px; }
-        .input-cyber-group .input-group-text { background: transparent; border: none; color: #64748b; padding-left: 18px; }
 
-        .cyber-table-wrapper { border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; }
+        /* FIX: Tambahkan properti wajib overflow-x auto agar tabel bisa di-swipe / di-geser kanan kiri secara mandiri */
+        .cyber-table-wrapper { 
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            overflow-x: auto !important; 
+            background: #ffffff;
+            -webkit-overflow-scrolling: touch;
+        }
         .table-cyber { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
-        .table-cyber thead th { background: #f8fafc !important; color: #334155 !important; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; padding: 16px 22px; border-bottom: 1px solid var(--border-color); }
+        .table-cyber thead th { background: #f8fafc !important; color: #334155 !important; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; padding: 16px 22px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
         .table-cyber tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border-color); }
         .table-cyber tbody tr:hover td { background: #f8fafc; }
-        .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; }
+        .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; white-space: nowrap; }
 
         .neon-badge-stock { background: rgba(2, 132, 199, 0.06) !important; color: var(--primary) !important; border: 1px solid rgba(2, 132, 199, 0.1) !important; border-radius: 8px; padding: 5px 12px; font-weight: 700; font-size: 0.8rem; display: inline-block; }
+
+        /* FIX: Responsivitas Media Query Layar HP dan Tablet kecil */
+        @media (max-width: 991.98px) {
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid rgba(2, 132, 199, 0.15); padding: 20px; }
+            .content { margin-left: 0; }
+            .main-body-wrapper { padding: 20px; }
+            .navbar-custom { padding: 20px; }
+            .cyber-search-box { flex-direction: column; align-items: stretch !important; }
+            .cyber-search-box form { flex-direction: column; }
+            .cyber-search-box a { justify-content: center; }
+        }
     </style>
 </head>
 <body>
@@ -156,7 +182,7 @@ if(!$query){
 <div class="sidebar">
     <h3><i class="fa-solid fa-bolt text-primary"></i> I-CALM Panel</h3>
     
-    <a href="../dashboard/index.php">
+    <a href="/monitoring_barang/dashboard/index.php">
         <span class="menu-content-wrapper"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></span>
     </a>
     
@@ -165,23 +191,22 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../material/index.php">Material Gudang</a>
-        <a href="../ba/index.php">Database BA</a>
+        <a href="/monitoring_barang/material/index.php">Material Gudang</a>
+        <a href="/monitoring_barang/ba/index.php">Database BA</a>
     </div>
 
-    <!-- Dropdown Kategori Aktif Secara Default -->
     <button class="dropdown-btn active">
         <span class="menu-content-wrapper"><i class="fa-solid fa-tags menu-icon"></i><span>Kategori</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container" style="display: block;">
-        <a href="../kategori/stok.php">Stok</a>
-        <a href="../kategori/non_stok.php">Non Stok</a>
-        <a href="../kategori/non_po.php" class="active-menu">Non PO</a>
-        <a href="../kategori/ex_bongkaran.php">Ex Bongkaran</a>
-        <a href="../kategori/pre_memory.php">Pre Memory</a>
-        <a href="../kategori/peminjaman.php">Peminjaman</a>
-        <a href="../kategori/pemakaian.php">Pemakaian</a>
+        <a href="/monitoring_barang/kategori/stok/stok.php">Stok</a>
+        <a href="/monitoring_barang/kategori/non_stok/non_stok.php">Non Stok</a>
+        <a href="/monitoring_barang/kategori/non_po/non_po.php" class="active-menu">Non PO</a>
+        <a href="/monitoring_barang/kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
+        <a href="/monitoring_barang/kategori/pre_memory/pre_memory.php">Pre Memory</a>
+        <a href="/monitoring_barang/kategori/peminjaman/peminjaman.php">Peminjaman</a>
+        <a href="/monitoring_barang/kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -189,15 +214,15 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../import/material.php">Import Material</a>
-        <a href="../import/ba.php">Import BA</a>
-        <a href="../import/form_stok.php">Import Stok</a>
-        <a href="../import/form_non_stok.php">Import Non Stok</a>
-        <a href="../import/form_non_po.php">Import Non PO</a>
-        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
+        <a href="/monitoring_barang/import/material.php">Import Material</a>
+        <a href="/monitoring_barang/import/ba.php">Import BA</a>
+        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
+        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
+        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
+        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -205,11 +230,11 @@ if(!$query){
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
-        <a href="../export/material_excel.php">Export Material</a>
-        <a href="../export/ba_excel.php">Export BA</a>
+        <a href="/monitoring_barang/export/material_excel.php">Export Material</a>
+        <a href="/monitoring_barang/export/ba_excel.php">Export BA</a>
     </div>
     
-    <a href="../login/logout.php" class="logout-button">
+    <a href="/monitoring_barang/login/logout.php" class="logout-button">
         <span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span>
     </a>
 </div>
@@ -240,22 +265,25 @@ if(!$query){
             </div>
         </div>
 
-        <div class="cyber-search-box mb-4">
-            <form method="GET">
-                <div class="row g-3">
-                    <div class="col-md-10">
-                        <div class="input-group input-cyber-group">
-                            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                            <input type="text" name="cari" class="form-control" autocomplete="off" placeholder="Cari material khusus Non PO..." value="<?= htmlspecialchars($cari_clean); ?>">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height:100%;"><i class="fa-solid fa-sliders me-1"></i> Saring</button>
-                    </div>
+        <!-- Tombol Saring dan Tambah Sejajar Melebar Penuh -->
+        <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
+            <form method="GET" class="d-flex gap-2" style="flex: 1;">
+                <div class="input-group" style="flex: 1;">
+                    <span class="input-group-text bg-white border-end-0 px-3" style="border-radius: 12px 0 0 12px; border-color: #cbd5e1; height: 46px; color: #64748b;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" name="cari" class="form-control border-start-0 ps-1 pr-3" autocomplete="off" placeholder="Cari material khusus Non PO..." value="<?= htmlspecialchars($cari_clean); ?>" style="border-radius: 0 12px 12px 0; border-color: #cbd5e1; height: 46px; background-color: #fff;">
                 </div>
+                <button type="submit" class="btn btn-primary px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #0284c7; border: none; height: 46px; white-space: nowrap;">
+                    <i class="fa-solid fa-sliders"></i> Saring
+                </button>
             </form>
+            <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #059669; border: none; height: 46px; white-space: nowrap;">
+                <i class="fa-solid fa-plus"></i> Tambah
+            </a>
         </div>
 
+        <!-- FIX: Ditambahkan kelas bootstrap table-responsive asli pembungkus area luar div -->
         <div class="cyber-table-wrapper table-responsive mb-4">
             <table class="table-cyber">
                 <thead>
@@ -273,6 +301,7 @@ if(!$query){
                         <th>KONDISI</th>
                         <th>VENDOR</th>
                         <th>BERITA ACARA</th>
+                        <th width="120" class="text-center">AKSI</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -283,22 +312,30 @@ if(!$query){
                     ?>
                     <tr>
                         <td><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
-                        <td><?= htmlspecialchars($d['jenis_ba']); ?></td>
+                        <td><?= htmlspecialchars($d['jenis_ba'] ?? ''); ?></td>
                         <td><?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
-                        <td><?= htmlspecialchars($d['nama_material']); ?></td>
-                        <td><?= htmlspecialchars($d['merk_jenis']); ?></td>
-                        <td><?= htmlspecialchars($d['jenis_barang']); ?></td>
-                        <td><?= htmlspecialchars($d['sumber_barang']); ?></td>
-                        <td><?= htmlspecialchars($d['satuan']); ?></td>
-                        <td><span class="neon-badge-stock"><?= number_format((int)$d['jumlah']); ?></span></td>
-                        <td><?= htmlspecialchars($d['tujuan']); ?></td>
-                        <td><?= htmlspecialchars($d['kondisi']); ?></td>
-                        <td><?= htmlspecialchars($d['vendor']); ?></td>
-                        <td><?= htmlspecialchars($d['berita_acara']); ?></td>
+                        <td><?= htmlspecialchars($d['nama_material'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['merk_jenis'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['jenis_barang'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['sumber_barang'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['satuan'] ?? ''); ?></td>
+                        <td><span class="neon-badge-stock"><?= number_format((int)($d['jumlah'] ?? 0)); ?></span></td>
+                        <td><?= htmlspecialchars($d['tujuan'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['kondisi_material'] ?? $d['kondisi'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['asal_vendor'] ?? $d['vendor'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['berita_acara'] ?? ''); ?></td>
+                        <!-- Kolom Aksi di Ujung Kanan Bgt -->
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail"><i class="fa-solid fa-eye"></i></a>
+                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa-solid fa-pen"></i></a>
+                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
+                            </div>
+                        </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>
-                        <td colspan="13" class="text-center py-5" style="color: var(--text-muted) !important;">
+                        <td colspan="14" class="text-center py-5" style="color: var(--text-muted) !important;">
                             <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data kosong atau tidak ditemukan.
                         </td>
                     </tr>
@@ -332,6 +369,7 @@ if(!$query){
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation(); // Mencegah bentrok trigger di mobile
             const container = this.nextElementSibling;
             this.classList.toggle('active');
             
@@ -342,6 +380,9 @@ if(!$query){
             }
         });
     });
+    
+    // Penanganan swipe touch layar agar mulus
+    document.addEventListener('touchstart', function(){}, {passive: true});
 </script>
 </body>
 </html>
