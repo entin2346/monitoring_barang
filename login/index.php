@@ -21,7 +21,9 @@ if(isset($_POST['login'])){
         $data = mysqli_fetch_assoc($cek);
 
         $_SESSION['login'] = true;
-        $_SESSION['nama'] = $data['nama_lengkap'];
+        $_SESSION['nama']  = $data['nama_lengkap'];
+        // PERBAIKAN: Menyimpan data role ke dalam Session saat login sukses
+        $_SESSION['role']  = $data['role'] ?? 'User';
 
         header("Location: ../dashboard/index.php");
         exit;
@@ -45,7 +47,6 @@ if(isset($_POST['login'])){
 
     <style>
         :root {
-            /* PALET WARNA BARU (MATCHING DENGAN SPLASH SCREEN) */
             --bg-base: #e2e8f0;            
             --bg-card: rgba(255, 255, 255, 0.45); 
             --primary-brand: #0284c7;       
@@ -63,7 +64,6 @@ if(isset($_POST['login'])){
 
         body {
             font-family: 'Inter', sans-serif;
-            /* Gradasi soft radial sejuk */
             background: radial-gradient(circle at top right, #dbeafe 0%, var(--bg-base) 60%, #e0e7ff 100%);
             min-height: 100vh;
             display: flex;
@@ -76,7 +76,6 @@ if(isset($_POST['login'])){
             perspective: 800px;
         }
 
-        /* CANVAS PARTIKEL ELEKTRON BACKGROUND */
         #particleCanvas {
             position: absolute;
             top: 0;
@@ -87,7 +86,6 @@ if(isset($_POST['login'])){
             pointer-events: none;
         }
 
-        /* BIAS CAHAYA LEMBUT */
         .bg-glow-container {
             position: absolute;
             width: 100%;
@@ -134,7 +132,6 @@ if(isset($_POST['login'])){
             100% { transform: translate(-20px, -30px) scale(1.05); border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%; }
         }
 
-        /* MECHANICAL CONTAINER 3D */
         .card-container {
             position: relative;
             z-index: 2;
@@ -142,7 +139,6 @@ if(isset($_POST['login'])){
             padding: 20px;
         }
 
-        /* LOGIN CARD GLASSMORPHISM SUPER TIMBUL */
         .login-card {
             position: relative;
             width: 450px;
@@ -174,7 +170,6 @@ if(isset($_POST['login'])){
             transition: opacity 0.3s ease;
         }
 
-        /* 3D POP OUT FOR INTERNAL ELEMENTS */
         .card-header-custom, .card-body {
             transform-style: preserve-3d;
         }
@@ -235,7 +230,6 @@ if(isset($_POST['login'])){
             display: block;
         }
 
-        /* INPUT FIELD LEMBUT MODERN */
         .input-group-custom {
             border: 1.5px solid rgba(148, 163, 184, 0.25);
             background: rgba(255, 255, 255, 0.4);
@@ -294,7 +288,6 @@ if(isset($_POST['login'])){
             color: var(--text-main);
         }
 
-        /* TOMBOL LOGIN PREMIUM */
         .btn-login {
             background: linear-gradient(135deg, var(--accent-blue), #1d4ed8);
             border: none;
@@ -417,7 +410,6 @@ if(isset($_POST['login'])){
 </div>
 
 <script>
-// 1. LOGIKA INTERAKSI KATA SANDI (MATA)
 function togglePassword(){
     var x = document.getElementById("password");
     var icon = document.getElementById("eyeIcon");
@@ -430,7 +422,6 @@ function togglePassword(){
     }
 }
 
-// 2. CANVAS ANIMASI ELEKTRON BACKGROUND
 const canvas = document.getElementById('particleCanvas');
 const ctx = canvas.getContext('2d');
 let particlesArray = [];
@@ -486,7 +477,6 @@ function animateParticles() {
 }
 animateParticles();
 
-// 3. INTERAKTIF 3D TILT WITH GLARE REFLECTION
 const wrapper = document.getElementById('cardWrapper');
 const card = document.getElementById('tiltCard');
 const glare = document.getElementById('cardGlare');

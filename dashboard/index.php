@@ -317,6 +317,14 @@ foreach($ultgList as $ultg){
         <a href="../export/material_excel.php">Export Material</a>
         <a href="../export/ba_excel.php">Export BA</a>
     </div>
+
+    <!-- TAMBAHAN MENU MANAJEMEN USER -->
+    <a href="../users/index.php">
+        <span class="menu-content-wrapper">
+            <i class="fa-solid fa-user-gear"></i>
+            <span>Manajemen User</span>
+        </span>
+    </a>
     
     <a href="../login/logout.php" class="logout-button">
         <span class="menu-content-wrapper">

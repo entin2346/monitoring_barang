@@ -20,7 +20,8 @@ if(isset($_POST['register'])){
         if(mysqli_num_rows($cek_user) > 0){
             $error = "Username sudah terdaftar, gunakan yang lain!";
         } else {
-            $query = mysqli_query($conn, "INSERT INTO users (nama_lengkap, username, password) VALUES ('$nama_lengkap', '$username', '$password_encrypted')");
+            // PERBAIKAN: Menambahkan kolom 'role' dengan nilai 'User' secara eksplisit
+            $query = mysqli_query($conn, "INSERT INTO users (nama_lengkap, username, password, role) VALUES ('$nama_lengkap', '$username', '$password_encrypted', 'User')");
             if($query){
                 $success = "Registrasi Berhasil! Silakan <a href='index.php' class='fw-bold text-white'>Login</a>.";
             } else {
@@ -95,7 +96,6 @@ if(isset($_POST['register'])){
 </div>
 
 <script>
-    // Partikel Background tetap ada agar tampilan tetap hidup dan senada dengan login
     const canvas = document.getElementById('particleCanvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
