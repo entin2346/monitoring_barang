@@ -84,135 +84,109 @@ if (isset($_POST['submit_import'])) {
                     continue;
                 }
                 
-               // ==========================
-// 1. SIMPAN KE TABEL ex_bongkaran
-// ==========================
-$query_ex = "INSERT INTO ex_bongkaran
-(
-unit,
-nama_material,
-mtu,
-tegangan,
-merk_tipe,
-no_seri,
-gardu_induk,
-lokasi_asal_eks_bongkaran,
-no_kontrak_penggantian,
-judul_kontrak_penggantian,
-jumlah,
-satuan,
-nilai_buku,
-berat,
-lokasi_penyimpanan,
-kondisi,
-justifikasi_kondisi,
-kelengkapan_aksesoris,
-ket_kelengkapan_aksesoris,
-keterangan_ex_bongkaran,
-status,
-ket_waktu_pembongkaran,
-tanggal_update_terakhir,
-no_at,
-nilai_perolehan,
-techidentno,
-upt,
-umur_operasi,
-umur_simpan,
-tahun_pembuatan,
-funloct,
-katalog_mara,
-no_aset,
-foto_nameplate,
-foto_material,
-link_ba_pemindahan,
-link_ba_pemanfaatan,
-link_hasil_uji,
-link_ba_penggantian_mtu,
-keterangan,
-keterangan_tambahan
-)
-VALUES
-(
-'$unit',
-'$nama_material',
-'$mtu',
-'$tegangan',
-'$merk_tipe',
-'$no_seri',
-'$gardu_induk',
-'$lokasi_asal_eks_bongkaran',
-'$no_kontrak_penggantian',
-'$judul_kontrak_penggantian',
-'$jumlah',
-'$satuan',
-'$nilai_buku',
-'$berat',
-'$lokasi_penyimpanan',
-'$kondisi',
-'$justifikasi_kondisi',
-'$kelengkapan_aksesoris',
-'$ket_kelengkapan_aksesoris',
-'$keterangan_ex_bongkaran',
-'$status',
-'$ket_waktu_pembongkaran',
-'$tanggal_update_terakhir',
-'$no_at',
-'$nilai_perolehan',
-'$techidentno',
-'$upt',
-'$umur_operasi',
-'$umur_simpan',
-'$tahun_pembuatan',
-'$funloct',
-'$katalog_mara',
-'$no_aset',
-'$foto_nameplate',
-'$foto_material',
-'$link_ba_pemindahan',
-'$link_ba_pemanfaatan',
-'$link_hasil_uji',
-'$link_ba_penggantian_mtu',
-'$keterangan',
-'$keterangan_tambahan'
-)";
+                // ==========================
+                // 1. SIMPAN KE TABEL ex_bongkaran
+                // ==========================
+                $query_ex = "INSERT INTO ex_bongkaran
+                (
+                unit,
+                nama_material,
+                mtu,
+                tegangan,
+                merk_tipe,
+                no_seri,
+                gardu_induk,
+                lokasi_asal_eks_bongkaran,
+                no_kontrak_penggantian,
+                judul_kontrak_penggantian,
+                jumlah,
+                satuan,
+                nilai_buku,
+                berat,
+                lokasi_penyimpanan,
+                kondisi,
+                justifikasi_kondisi,
+                kelengkapan_aksesoris,
+                ket_kelengkapan_aksesoris,
+                keterangan_ex_bongkaran,
+                status,
+                ket_waktu_pembongkaran,
+                tanggal_update_terakhir,
+                no_at,
+                nilai_perolehan,
+                techidentno,
+                upt,
+                umur_operasi,
+                umur_simpan,
+                tahun_pembuatan,
+                funloct,
+                katalog_mara,
+                no_aset,
+                foto_nameplate,
+                foto_material,
+                link_ba_pemindahan,
+                link_ba_pemanfaatan,
+                link_hasil_uji,
+                link_ba_penggantian_mtu,
+                keterangan,
+                keterangan_tambahan
+                )
+                VALUES
+                (
+                '$unit',
+                '$nama_material',
+                '$mtu',
+                '$tegangan',
+                '$merk_tipe',
+                '$no_seri',
+                '$gardu_induk',
+                '$lokasi_asal_eks_bongkaran',
+                '$no_kontrak_penggantian',
+                '$judul_kontrak_penggantian',
+                '$jumlah',
+                '$satuan',
+                '$nilai_buku',
+                '$berat',
+                '$lokasi_penyimpanan',
+                '$kondisi',
+                '$justifikasi_kondisi',
+                '$kelengkapan_aksesoris',
+                '$ket_kelengkapan_aksesoris',
+                '$keterangan_ex_bongkaran',
+                '$status',
+                '$ket_waktu_pembongkaran',
+                '$tanggal_update_terakhir',
+                '$no_at',
+                '$nilai_perolehan',
+                '$techidentno',
+                '$upt',
+                '$umur_operasi',
+                '$umur_simpan',
+                '$tahun_pembuatan',
+                '$funloct',
+                '$katalog_mara',
+                '$no_aset',
+                '$foto_nameplate',
+                '$foto_material',
+                '$link_ba_pemindahan',
+                '$link_ba_pemanfaatan',
+                '$link_hasil_uji',
+                '$link_ba_penggantian_mtu',
+                '$keterangan',
+                '$keterangan_tambahan'
+                )";
 
-if (!mysqli_query($conn, $query_ex)) {
-    die("Gagal insert ke ex_bongkaran: " . mysqli_error($conn) . "<br><br>Query:<br>" . $query_ex);
-}
+                if (mysqli_query($conn, $query_ex)) {
+                    $sukses_insert++;
+                } else {
+                    $gagal_insert++;
+                    $error_logs[] = "Baris ".($index+1)." : " . mysqli_error($conn);
+                }
 
+                // ====================================================
+                // 2. BAGIAN SIMPAN KE material_gudang SUDAH DIHAPUS
+                // ====================================================
 
-// ==========================
-// 2. SIMPAN KE material_gudang
-// ==========================
-$query_material = "INSERT INTO material_gudang
-(
-nama_material,
-satuan,
-jumlah,
-kondisi,
-lokasi_penyimpanan,
-keterangan,
-foto_material,
-jenis_kategori
-)
-VALUES
-(
-'$nama_material',
-'$satuan',
-'$jumlah',
-'$kondisi',
-'$lokasi_penyimpanan',
-'$keterangan_ex_bongkaran',
-'$foto_material',
-'ex_bongkaran'
-)";
-
-if(mysqli_query($conn,$query_material)){
-    $sukses_insert++;
-}else{
-    $gagal_insert++;
-    $error_logs[]="Baris ".($index+1)." : ".mysqli_error($conn);
-}
                 $index++;
             }
             fclose($handle);
