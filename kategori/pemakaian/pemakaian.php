@@ -263,21 +263,36 @@ if(!$query){
 
         <!-- Bagian Input Saring & Tambah Sesuai Ukuran Gambar -->
         <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
-            <form method="GET" class="d-flex gap-2" style="flex: 1;">
-                <div class="input-group" style="flex: 1;">
-                    <span class="input-group-text bg-white border-end-0 px-3" style="border-radius: 12px 0 0 12px; border-color: #cbd5e1; height: 46px; color: #64748b;">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </span>
-                    <input type="text" name="cari" class="form-control border-start-0 ps-1 pr-3" autocomplete="off" placeholder="Cari material khusus Pemakaian..." value="<?= htmlspecialchars($cari_clean); ?>" style="border-radius: 0 12px 12px 0; border-color: #cbd5e1; height: 46px; background-color: #fff;">
-                </div>
+    <form method="GET" class="d-flex gap-2" style="flex: 1;">
+        ...
+    </form>
+
+    <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+    <a href="tambah.php"
+       class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
+       style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
+        <i class="fa-solid fa-plus"></i> Tambah
+    </a>
+
+    <?php } ?>
+
+</div> <!-- PENUTUP cyber-search-box -->
+
+<div class="cyber-table-wrapper mb-4">
                 <button type="submit" class="btn btn-primary px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #0d6efd; border: none; height: 46px; white-space: nowrap;">
                     <i class="fa-solid fa-sliders"></i> Saring
                 </button>
             </form>
-            <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #059669; border: none; height: 46px; white-space: nowrap;">
-                <i class="fa-solid fa-plus"></i> Tambah
-            </a>
-        </div>
+          <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+<a href="tambah.php"
+   class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
+   style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
+    <i class="fa-solid fa-plus"></i> Tambah
+</a>
+
+<?php } ?>
 
         <div class="cyber-table-wrapper mb-4">
             <table class="table-cyber">
@@ -305,13 +320,35 @@ if(!$query){
                         <td><?= htmlspecialchars($d['satuan'] ?? ''); ?></td>
                         <td><span class="neon-badge-stock"><?= number_format((float)($d['jumlah'] ?? 0)); ?></span></td>
                         <td><?= htmlspecialchars($d['no_rak'] ?? $d['sumber_barang'] ?? '-'); ?></td>
-                        <td class="text-center">
-                            <div class="d-flex gap-1 justify-content-center">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail"><i class="fa-solid fa-eye"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa-solid fa-pen"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
-                            </div>
-                        </td>
+                       <td class="text-center">
+    <div class="d-flex gap-1 justify-content-center">
+
+        <!-- Semua user boleh melihat detail -->
+        <a href="detail.php?id=<?= $d['id']; ?>"
+           class="btn btn-info btn-sm text-white"
+           title="Detail">
+            <i class="fa-solid fa-eye"></i>
+        </a>
+
+        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+            <a href="edit.php?id=<?= $d['id']; ?>"
+               class="btn btn-warning btn-sm text-white"
+               title="Edit">
+                <i class="fa-solid fa-pen"></i>
+            </a>
+
+            <a href="hapus.php?id=<?= $d['id']; ?>"
+               class="btn btn-danger btn-sm text-white"
+               title="Hapus"
+               onclick="return confirm('Yakin ingin menghapus data ini?')">
+                <i class="fa-solid fa-trash"></i>
+            </a>
+
+        <?php } ?>
+
+    </div>
+</td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

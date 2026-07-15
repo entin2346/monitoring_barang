@@ -490,9 +490,16 @@ if(!$query){
                         <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: #3b82f6; border: none; height: 100%;"><i class="fa-solid fa-sliders me-1"></i> Cari Komponen</button>
                     </div>
                     <div class="col-md-2">
-                        <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: #10b981; border: none; height: 100%; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
-                            <i class="fa-solid fa-circle-plus me-2"></i>Tambah Material
-                        </a>
+                     <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+<a href="tambah.php"
+   class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center"
+   style="border-radius:12px;">
+    <i class="fa-solid fa-circle-plus me-2"></i>
+    Tambah Material
+</a>
+
+<?php } ?>
                     </div>
                 </div>
             </form>
@@ -601,13 +608,30 @@ switch($kat_real){
                         <td><?= htmlspecialchars($d['lokasi_penyimpanan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
                         <td class="fw-semibold text-primary"><?= htmlspecialchars($d['sumber_barang'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
                         <td><span class="small text-muted"><?= htmlspecialchars($d['keterangan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></span></td>
-                        <td class="text-center">
-                            <div class="btn-action-group">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn-action-item btn-view"><i class="fa-solid fa-expand"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn-action-item btn-edit"><i class="fa-solid fa-user-pen"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn-action-item btn-delete" onclick="return confirm('Hapus permanently?')"><i class="fa-solid fa-trash-can"></i></a>
-                            </div>
-                        </td>
+                       <td class="text-center">
+    <div class="btn-action-group">
+
+        <!-- Semua user boleh melihat detail -->
+        <a href="detail.php?id=<?= $d['id']; ?>" class="btn-action-item btn-view">
+            <i class="fa-solid fa-expand"></i>
+        </a>
+
+        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+            <a href="edit.php?id=<?= $d['id']; ?>" class="btn-action-item btn-edit">
+                <i class="fa-solid fa-user-pen"></i>
+            </a>
+
+            <a href="hapus.php?id=<?= $d['id']; ?>"
+               class="btn-action-item btn-delete"
+               onclick="return confirm('Hapus permanently?')">
+                <i class="fa-solid fa-trash-can"></i>
+            </a>
+
+        <?php } ?>
+
+    </div>
+</td>
                     </tr>
                     <?php
                         }

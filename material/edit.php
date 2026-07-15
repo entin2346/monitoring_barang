@@ -1,10 +1,16 @@
 <?php
 session_start();
+session_start();
 
 if(!isset($_SESSION['login'])){
     header("Location: ../login/index.php");
     exit;
 }
+
+if(strtolower($_SESSION['role']) != 'admin'){
+    die("Akses ditolak.");
+}
+
 
 include "../config/koneksi.php";
 

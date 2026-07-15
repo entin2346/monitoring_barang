@@ -287,9 +287,17 @@ if(!$query){
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height:100%;"><i class="fa-solid fa-sliders me-1"></i> Saring</button>
                     </div>
-                    <div class="col-md-2">
-                        <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none; height:100%;"><i class="fa-solid fa-plus me-1"></i> Tambah</a>
-                    </div>
+                  <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+<div class="col-md-2">
+    <a href="tambah.php"
+       class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center"
+       style="border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;height:100%;">
+        <i class="fa-solid fa-plus me-1"></i> Tambah
+    </a>
+</div>
+
+<?php } ?>
                 </div>
             </form>
         </div>
@@ -336,13 +344,35 @@ if(!$query){
                             <i class="fa-solid fa-map-pin text-danger opacity-70 me-2 small"></i>
                             <?= htmlspecialchars($lokasi_web); ?>
                         </td>
-                        <td class="text-center">
-                            <div class="btn-group gap-1">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-sm btn-outline-info rounded-2 p-1 px-2" title="Detail"><i class="fa-solid fa-eye"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-sm btn-outline-warning rounded-2 p-1 px-2" title="Edit"><i class="fa-solid fa-pen-to-square"></i></a>
-                                <a href="hapus.php?id=<?= (int)$d['id']; ?>" class="btn btn-sm btn-outline-danger rounded-2 p-1 px-2" title="Hapus" onclick="return confirm('Apakah anda yakin ingin menghapus data ini?');"><i class="fa-solid fa-trash-can"></i></a>
-                            </div>
-                        </td>
+                       <td class="text-center">
+    <div class="btn-group gap-1">
+
+        <!-- Semua user boleh melihat detail -->
+        <a href="detail.php?id=<?= $d['id']; ?>"
+           class="btn btn-sm btn-outline-info"
+           title="Detail">
+            <i class="fa-solid fa-eye"></i>
+        </a>
+
+        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+            <a href="edit.php?id=<?= $d['id']; ?>"
+               class="btn btn-sm btn-outline-warning"
+               title="Edit">
+                <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+
+            <a href="hapus.php?id=<?= (int)$d['id']; ?>"
+               class="btn btn-sm btn-outline-danger"
+               title="Hapus"
+               onclick="return confirm('Apakah anda yakin ingin menghapus data ini?');">
+                <i class="fa-solid fa-trash-can"></i>
+            </a>
+
+        <?php } ?>
+
+    </div>
+</td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

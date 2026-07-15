@@ -11,7 +11,16 @@ $data = mysqli_fetch_assoc(
         WHERE id='$id'
     ")
 );
+session_start();
 
+if(!isset($_SESSION['login'])){
+    header("Location: ../login/index.php");
+    exit;
+}
+
+if(strtolower($_SESSION['role']) != 'admin'){
+    die("Akses ditolak.");
+}
 if ($data) {
     $nama_material = mysqli_real_escape_string($conn, trim($data['nama_material']));
 

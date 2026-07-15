@@ -293,9 +293,16 @@ if(!$query){
                         <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height:100%;"><i class="fa-solid fa-sliders me-1"></i> Saring</button>
                     </div>
                     <div class="col-md-2">
-                        <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none; height:100%; color: white; text-decoration: none;">
-                            <i class="fa-solid fa-plus me-2"></i> Tambah
-                        </a>
+                     <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+<a href="tambah.php"
+   class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center"
+   style="border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;height:100%;color:white;text-decoration:none;">
+    <i class="fa-solid fa-plus me-2"></i>
+    Tambah
+</a>
+
+<?php } ?>
                     </div>
                 </div>
             </form>
@@ -339,16 +346,28 @@ if(!$query){
                         <!-- KOTAK AKSI MINIMALIS HANYA IKON (GAMBAR 2) -->
                         <td class="text-center">
                             <div class="action-box-group">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="action-icon-link" title="Detail">
-                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                                </a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="action-icon-link" title="Edit">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="action-icon-link" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus data material ini?');">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </a>
-                            </div>
+
+    <!-- Semua user boleh melihat detail -->
+    <a href="detail.php?id=<?= $d['id']; ?>" class="action-icon-link" title="Detail">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+
+    <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+        <a href="edit.php?id=<?= $d['id']; ?>" class="action-icon-link" title="Edit">
+            <i class="fa-solid fa-pen-to-square"></i>
+        </a>
+
+        <a href="hapus.php?id=<?= $d['id']; ?>"
+           class="action-icon-link"
+           title="Hapus"
+           onclick="return confirm('Apakah Anda yakin ingin menghapus data material ini?');">
+            <i class="fa-solid fa-trash-can"></i>
+        </a>
+
+    <?php } ?>
+
+</div>
                         </td>
                     </tr>
                     <?php } } else { ?>

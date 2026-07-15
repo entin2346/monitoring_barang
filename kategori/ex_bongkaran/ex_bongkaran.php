@@ -245,9 +245,15 @@ if(!$query){
                     <i class="fa-solid fa-sliders"></i> Saring
                 </button>
             </form>
-            <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #059669; border: none; height: 46px; white-space: nowrap;">
-                <i class="fa-solid fa-plus"></i> Tambah
-            </a>
+          <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+<a href="tambah.php"
+   class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
+   style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
+    <i class="fa-solid fa-plus"></i> Tambah
+</a>
+
+<?php } ?>
         </div>
 
         <div class="cyber-table-wrapper mb-4">
@@ -348,13 +354,35 @@ if(!$query){
                         <td><?= htmlspecialchars($d['link_ba_penggantian_mtu'] ?? $d['link_ba_penggantian'] ?? '-'); ?></td>
                         <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
                         <td><?= htmlspecialchars($d['keterangan_tambahan'] ?? '-'); ?></td>
-                        <td class="text-center">
-                            <div class="d-flex gap-1 justify-content-center">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail"><i class="fa-solid fa-eye"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa-solid fa-pen"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
-                            </div>
-                        </td>
+                      <td class="text-center">
+    <div class="d-flex gap-1 justify-content-center">
+
+        <!-- Semua user boleh melihat detail -->
+        <a href="detail.php?id=<?= $d['id']; ?>"
+           class="btn btn-info btn-sm text-white"
+           title="Detail">
+            <i class="fa-solid fa-eye"></i>
+        </a>
+
+        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+            <a href="edit.php?id=<?= $d['id']; ?>"
+               class="btn btn-warning btn-sm text-white"
+               title="Edit">
+                <i class="fa-solid fa-pen"></i>
+            </a>
+
+            <a href="hapus.php?id=<?= $d['id']; ?>"
+               class="btn btn-danger btn-sm text-white"
+               title="Hapus"
+               onclick="return confirm('Yakin ingin menghapus data ini?')">
+                <i class="fa-solid fa-trash"></i>
+            </a>
+
+        <?php } ?>
+
+    </div>
+</td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

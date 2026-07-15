@@ -374,9 +374,15 @@ $total_halaman = ceil($total_data / $limit);
                     <button type="submit" class="btn btn-dark fw-bold px-4 text-nowrap" style="background: #0f172a; border:none; border-radius:12px;">
                         Cari Komponen
                     </button>
-                    <a href="tambah.php" class="btn btn-primary fw-bold px-4 d-flex align-items-center gap-1 text-nowrap" style="border-radius: 12px; background: var(--primary); border: none;">
-                        <i class="fa-solid fa-plus"></i> Tambah Database
-                    </a>
+                    <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+<a href="tambah.php"
+   class="btn btn-primary fw-bold px-4 d-flex align-items-center gap-1 text-nowrap"
+   style="border-radius:12px;background:var(--primary);border:none;">
+    <i class="fa-solid fa-plus"></i> Tambah Database
+</a>
+
+<?php } ?>
                 </div>
             </form>
         </div>
@@ -452,13 +458,28 @@ $total_halaman = ceil($total_data / $limit);
                         <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted)" title="<?= htmlspecialchars($d['keterangan'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             <?= htmlspecialchars($d['keterangan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?>
                         </td>
-                        <td class="text-center">
-                            <div class="btn-action-group-cyber">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn-action-item-cyber btn-view"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn-action-item-cyber btn-edit"><i class="fa-solid fa-pen-to-square"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn-action-item-cyber btn-delete tombol-hapus"><i class="fa-solid fa-trash-can"></i></a>
-                            </div>
-                        </td>
+                       <td class="text-center">
+    <div class="btn-action-group-cyber">
+
+        <!-- Semua user boleh melihat detail -->
+        <a href="detail.php?id=<?= $d['id']; ?>" class="btn-action-item-cyber btn-view">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>
+
+        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+
+            <a href="edit.php?id=<?= $d['id']; ?>" class="btn-action-item-cyber btn-edit">
+                <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+
+            <a href="hapus.php?id=<?= $d['id']; ?>" class="btn-action-item-cyber btn-delete tombol-hapus">
+                <i class="fa-solid fa-trash-can"></i>
+            </a>
+
+        <?php } ?>
+
+    </div>
+</td>
                     </tr>
                     <?php } } else { ?>
                     <tr><td colspan="15" class="text-center py-5 fw-bold text-muted"><i class="fa-solid fa-box-open d-block fs-1 mb-3 opacity-25"></i>Data Berita Acara tidak ditemukan</td></tr>
