@@ -263,33 +263,31 @@ if(!$query){
 <!-- Bagian Input Saring & Tambah -->
 <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
 
-    <form method="GET" class="d-flex gap-2 flex-grow-1">
+  <form method="GET" class="d-flex align-items-center gap-3 flex-grow-1">
 
-        <div class="input-group">
-            <span class="input-group-text bg-white border-end-0"
-                  style="border-radius:12px 0 0 12px;">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
+    <div class="input-group flex-grow-1">
+        <span class="input-group-text bg-white border-end-0"
+              style="height:46px;border-radius:12px 0 0 12px;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
 
-            <input
-                type="text"
-                name="cari"
-                class="form-control border-start-0"
-                placeholder="Cari material..."
-                value="<?= htmlspecialchars($cari_clean); ?>"
-                autocomplete="off"
-                style="height:46px;border-radius:0 12px 12px 0;">
-        </div>
+        <input
+            type="text"
+            name="cari"
+            class="form-control border-start-0"
+            placeholder="Cari material..."
+            value="<?= htmlspecialchars($cari_clean); ?>"
+            style="height:46px;border-radius:0 12px 12px 0;">
+    </div>
 
-        <button
-            type="submit"
-            class="btn btn-primary fw-bold px-4"
-            style="height:46px;border-radius:12px;">
-            <i class="fa-solid fa-sliders"></i>
-            Saring
-        </button>
+    <button
+        type="submit"
+        class="btn btn-primary fw-bold px-4"
+        style="height:46px;min-width:120px;border-radius:12px;white-space:nowrap;">
+        <i class="fa-solid fa-sliders"></i> Saring
+    </button>
 
-    </form>
+</form>
 
     <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
         <a href="tambah.php"
