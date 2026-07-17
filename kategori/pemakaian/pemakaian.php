@@ -260,42 +260,51 @@ if(!$query){
                 </div>
             </div>
         </div>
+<!-- Bagian Input Saring & Tambah -->
+<div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
 
-        <!-- Bagian Input Saring & Tambah Sesuai Ukuran Gambar -->
-        <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
-    <form method="GET" class="d-flex gap-2" style="flex: 1;">
-        ...
+    <form method="GET" class="d-flex gap-2 flex-grow-1">
+
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"
+                  style="border-radius:12px 0 0 12px;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+
+            <input
+                type="text"
+                name="cari"
+                class="form-control border-start-0"
+                placeholder="Cari material..."
+                value="<?= htmlspecialchars($cari_clean); ?>"
+                autocomplete="off"
+                style="height:46px;border-radius:0 12px 12px 0;">
+        </div>
+
+        <button
+            type="submit"
+            class="btn btn-primary fw-bold px-4"
+            style="height:46px;border-radius:12px;">
+            <i class="fa-solid fa-sliders"></i>
+            Saring
+        </button>
+
     </form>
 
     <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-    <a href="tambah.php"
-       class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
-       style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
-        <i class="fa-solid fa-plus"></i> Tambah
-    </a>
-
+        <a href="tambah.php"
+           class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
+           style="height:46px;border-radius:12px;">
+            <i class="fa-solid fa-plus"></i>
+            Tambah
+        </a>
     <?php } ?>
 
-</div> <!-- PENUTUP cyber-search-box -->
+</div>
 
 <div class="cyber-table-wrapper mb-4">
-                <button type="submit" class="btn btn-primary px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #0d6efd; border: none; height: 46px; white-space: nowrap;">
-                    <i class="fa-solid fa-sliders"></i> Saring
-                </button>
-            </form>
-          <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
 
-<a href="tambah.php"
-   class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
-   style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
-    <i class="fa-solid fa-plus"></i> Tambah
-</a>
-
-<?php } ?>
-
-        <div class="cyber-table-wrapper mb-4">
-            <table class="table-cyber">
+<table class="table-cyber">
                 <thead>
                     <tr>
                         <th width="60" class="text-center">NO</th>
