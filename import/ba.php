@@ -14,123 +14,99 @@ $gagal_import  = false;
 
 // Proses Import
 if(isset($_POST['import'])){
-    if($_FILES['file']['error'] == 0){
+    if(isset($_FILES['file']) && $_FILES['file']['error'] == 0){
         
-        // Hilangkan batasan waktu eksekusi agar semua 3500+ data diproses sampai tuntas
         set_time_limit(0); 
         ini_set('memory_limit', '512M');
 
         $file = $_FILES['file']['tmp_name'];
+        
+        // Gunakan fgetcsv dengan auto-detect line endings
+        ini_set("auto_detect_line_endings", true);
         $handle = fopen($file, "r");
 
-        // Lewati baris pertama (Header Kolom: NO, JENIS BERITA ACARA, dst)
-        fgets($handle);
+        if($handle !== FALSE){
+            // Lewati baris pertama (Header Kolom)
+            fgetcsv($handle, 0, ",");
 
-        // Matikan autocommit agar proses query massal berjalan super cepat
-        $conn->autocommit(FALSE);
+            $conn->autocommit(FALSE);
 
-        // Prepared Statement untuk INSERT data baru
-        $stmt = $conn->prepare("INSERT INTO database_ba 
-            (no_urut, jenis_berita_acara, tanggal, nama_barang, merk_jenis, jenis_barang, sumber_barang, satuan, jumlah, tujuan, kondisi_material, no_seri, asal_barang_vendor, berita_acara, dokumentasi_ba_kembali, keterangan, keterangan_tambahan, tug5) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            // Prepared Statement untuk INSERT (tanpa pengecekan duplikat)
+            $stmt = $conn->prepare("INSERT INTO database_ba 
+                (no_urut, jenis_berita_acara, tanggal, nama_barang, merk_jenis, jenis_barang, sumber_barang, satuan, jumlah, tujuan, kondisi_material, no_seri, asal_barang_vendor, berita_acara, dokumentasi_ba_kembali, keterangan, keterangan_tambahan, tug5) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-        // Prepared Statement untuk CEK ANTI-DUPLIKAT (Berdasarkan No Urut, Tanggal, dan Nama Barang)
-        $check_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM database_ba WHERE no_urut = ? AND tanggal = ? AND nama_barang = ?");
-
-        // Membaca baris demi baris teks secara aman
-        while(($line = fgets($handle)) !== FALSE){
-            $line = trim($line);
-            if(empty($line)) continue;
-
-            // 1. Bersihkan sisa pembatas rusak ';;' atau ';' di ujung baris teks CSV Anda
-            $line = rtrim($line, ';');
-            $line = rtrim($line, ',');
-
-            // 2. Normalisasi baris yang dibungkus kutip utuh akibat error generator CSV (Contoh: "3545,KELUAR,...")
-            if (str_starts_with($line, '"') && str_ends_with($line, '"')) {
-                $line = substr($line, 1, -1);
-            }
-
-            // 3. Normalisasi kutip ganda berlapis yang merusak struktur data (""BA KELUAR..."" menjadi "BA KELUAR...")
-            $line = str_replace('""', '"', $line);
-
-            // 4. Parsing teks baris menjadi array data
-            $data = str_getcsv($line, ",");
-            
-            // Jika baris ternyata dipisah menggunakan titik koma (kasus baris bagian bawah), coba pisah dengan ';'
-            if(count($data) <= 1) {
-                $data = str_getcsv($line, ";");
-            }
-
-            // Ambil No Urut (Indeks 0) dan Nama Barang (Indeks 3)
-            $no_urut     = trim($data[0] ?? '');
-            $nama_barang = trim($data[3] ?? '');
-            
-            // Jika baris kosong atau hanya berisi baris kosong di akhir dokumen, lewatin (skip)
-            if(empty($no_urut) && empty($nama_barang)) continue;
-
-            $jenis_berita_acara = trim($data[1] ?? '');
-            
-            // 5. Konversi Format Tanggal CSV (Contoh: 1-Jul-26 atau 15-Jan-24) ke Format Database (Y-m-d)
-            $tanggal_csv = trim($data[2] ?? '');
-            $tanggal = NULL;
-            if(!empty($tanggal_csv)){
-                $date = DateTime::createFromFormat('d-M-y', $tanggal_csv);
-                if(!$date) {
-                    // Fallback jika format tanggal berupa Y-m-d bawaan
-                    $date = DateTime::createFromFormat('Y-m-d', $tanggal_csv);
+            // Membaca file CSV menggunakan fgetcsv agar parsing tanda koma/kutip rapi
+            while (($data = fgetcsv($handle, 0, ",")) !== FALSE) {
+                
+                // Fallback jika CSV menggunakan pemisah titik koma (;)
+                if (count($data) <= 1 && isset($data[0]) && strpos($data[0], ';') !== false) {
+                    $data = str_getcsv($data[0], ";");
                 }
-                $tanggal = ($date) ? $date->format('Y-m-d') : NULL;
+
+                $no_urut     = trim($data[0] ?? '');
+                $nama_barang = trim($data[3] ?? '');
+                
+                // Lewati hanya jika baris benar-benar kosong
+                if(empty($no_urut) && empty($nama_barang)) continue;
+
+                $jenis_berita_acara = trim($data[1] ?? '');
+                
+                // Konversi Format Tanggal CSV ke Format Database (Y-m-d)
+                $tanggal_csv = trim($data[2] ?? '');
+                $tanggal = NULL;
+                if(!empty($tanggal_csv)){
+                    $date = DateTime::createFromFormat('d-M-y', $tanggal_csv);
+                    if(!$date) {
+                        $date = DateTime::createFromFormat('d-m-Y', $tanggal_csv);
+                    }
+                    if(!$date) {
+                        $date = DateTime::createFromFormat('Y-m-d', $tanggal_csv);
+                    }
+                    $tanggal = ($date) ? $date->format('Y-m-d') : NULL;
+                }
+
+                $merk_jenis             = trim($data[4] ?? '');
+                $jenis_barang           = trim($data[5] ?? '');
+                $sumber_barang          = trim($data[6] ?? '');
+                $satuan                 = trim($data[7] ?? '');
+                
+                $jumlah_raw             = trim($data[8] ?? '0');
+                $jumlah                 = is_numeric($jumlah_raw) ? $jumlah_raw : 0;
+
+                $tujuan                 = trim($data[9] ?? '');
+                $kondisi_material       = trim($data[10] ?? '');
+                $no_seri                = trim($data[11] ?? '');
+                $asal_barang_vendor     = trim($data[12] ?? '');
+                $berita_acara           = trim($data[13] ?? '');
+                $dokumentasi_ba_kembali = trim($data[14] ?? '');
+                $keterangan             = trim($data[15] ?? '');
+                $keterangan_tambahan    = trim($data[16] ?? '');
+                $tug5                   = trim($data[18] ?? '');
+
+                // Langsung simpan ke database tanpa filter/skip duplikat
+                $stmt->bind_param("ssssssssssssssssss", 
+                    $no_urut, $jenis_berita_acara, $tanggal, $nama_barang, $merk_jenis, 
+                    $jenis_barang, $sumber_barang, $satuan, $jumlah, $tujuan, 
+                    $kondisi_material, $no_seri, $asal_barang_vendor, $berita_acara, 
+                    $dokumentasi_ba_kembali, $keterangan, $keterangan_tambahan, $tug5
+                );
+                
+                if($stmt->execute()){
+                    $jumlah_import++;
+                }
             }
 
-            $merk_jenis             = trim($data[4] ?? '');
-            $jenis_barang           = trim($data[5] ?? '');
-            $sumber_barang          = trim($data[6] ?? '');
-            $satuan                 = trim($data[7] ?? '');
-            $jumlah                 = trim($data[8] ?? '');
-            $tujuan                 = trim($data[9] ?? '');
-            $kondisi_material       = trim($data[10] ?? '');
-            $no_seri                = trim($data[11] ?? '');
-            $asal_barang_vendor     = trim($data[12] ?? '');
-            $berita_acara           = trim($data[13] ?? '');
-            $dokumentasi_ba_kembali = trim($data[14] ?? '');
-            $keterangan             = trim($data[15] ?? '');
-            $keterangan_tambahan    = trim($data[16] ?? '');
-            $tug5                   = trim($data[18] ?? ''); // Indeks ke-18 merupakan kolom TUG 5 pada CSV Anda
+            $conn->commit();
+            $conn->autocommit(TRUE);
 
-            // --- PROSES CEK ANTI-DUPLIKAT ---
-            $check_stmt->bind_param("sss", $no_urut, $tanggal, $nama_barang);
-            $check_stmt->execute();
-            $result = $check_stmt->get_result()->fetch_assoc();
-
-            // Jika data kombinasi ini sudah terdaftar di database, LEWATI (Jangan diinsert lagi)
-            if ($result['total'] > 0) {
-                continue;
-            }
-            // --------------------------------
-
-            // Bind parameter untuk menyimpan baris data baru
-            $stmt->bind_param("ssssssssssssssssss", 
-                $no_urut, $jenis_berita_acara, $tanggal, $nama_barang, $merk_jenis, 
-                $jenis_barang, $sumber_barang, $satuan, $jumlah, $tujuan, 
-                $kondisi_material, $no_seri, $asal_barang_vendor, $berita_acara, 
-                $dokumentasi_ba_kembali, $keterangan, $keterangan_tambahan, $tug5
-            );
+            fclose($handle);
+            $stmt->close();
             
-            if($stmt->execute()){
-                $jumlah_import++;
-            }
+            $sukses_import = true;
+        } else {
+            $gagal_import = true;
         }
-        
-        // Komit / Terapkan penyimpanan semua data secara permanen sekaligus
-        $conn->commit();
-        $conn->autocommit(TRUE);
-
-        fclose($handle);
-        $stmt->close();
-        $check_stmt->close();
-        
-        $sukses_import = true;
     } else {
         $gagal_import = true;
     }
