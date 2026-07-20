@@ -1,13 +1,20 @@
 <?php
 session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if(!isset($_SESSION['login'])){
     header("Location: ../../login/index.php");
     exit;
 }
+
+if(strtolower($_SESSION['role']) != 'admin'){
+    die("Akses ditolak.");
+}
 include "../../config/koneksi.php";
 
 $id = $_GET['id'] ?? 0;
-// Sesuaikan query pencarian data peminjaman
 $query = mysqli_query($conn, "SELECT * FROM peminjaman WHERE id = '$id'");
 $d = mysqli_fetch_assoc($query);
 
@@ -15,13 +22,128 @@ if(!$d){
     echo "<script>alert('Data tidak ditemukan!'); window.location='peminjaman.php';</script>";
     exit;
 }
+
+$arr_dokumentasi = json_decode($d['dokumentasi'] ?? '[]', true);
+if (!is_array($arr_dokumentasi)) { $arr_dokumentasi = []; }
+
+// --- LOGIKA HAPUS DOKUMENTASI LAMPIRAN VIA GET URL (TOMBOL X BERKAS) ---
+if (isset($_GET['delete_file'])) {
+    $file_to_delete = $_GET['delete_file'];
+    
+    // Cari index file di dalam array dokumentasi
+    $key = array_search($file_to_delete, $arr_dokumentasi);
+    if ($key !== false) {
+        // Hapus file fisik dari folder upload
+        $filepath = "upload/" . $file_to_delete;
+        if (file_exists($filepath)) {
+            unlink($filepath);
+        }
+        
+        // Buang nama file dari list array dokumentasi
+        unset($arr_dokumentasi[$key]);
+        $arr_dokumentasi = array_values($arr_dokumentasi); // Reset index array
+        
+        $dokumentasi_json = mysqli_real_escape_string($conn, json_encode($arr_dokumentasi));
+        mysqli_query($conn, "UPDATE peminjaman SET dokumentasi = '$dokumentasi_json' WHERE id = '$id'");
+        
+        echo "<script>alert('Lampiran berhasil dihapus!'); window.location='edit.php?id=$id';</script>";
+        exit;
+    }
+}
+
+// --- LOGIKA PROSES SUBMIT / TOMBOL UBAH DIPENCET ---
+if(isset($_POST['ubah'])){
+    $nama_material = mysqli_real_escape_string($conn, $_POST['nama_material']);
+    $asal_material = mysqli_real_escape_string($conn, $_POST['asal_material']);
+    $tanggal_pengambilan = mysqli_real_escape_string($conn, $_POST['tanggal_pengambilan']);
+    $peminjam = mysqli_real_escape_string($conn, $_POST['peminjam']);
+    $jumlah = (int)$_POST['jumlah'];
+    $satuan = mysqli_real_escape_string($conn, $_POST['satuan']);
+    $status_kembali = mysqli_real_escape_string($conn, $_POST['status_kembali']);
+    $jumlah_dikembalikan = mysqli_real_escape_string($conn, $_POST['jumlah_dikembalikan']);
+    $keterangan = mysqli_real_escape_string($conn, $_POST['keterangan']);
+
+    // Gunakan file lama sebagai nilai default database
+    $link_ba_ambil = $d['link_ba_ambil'];
+    $link_ba_kembali = $d['link_ba_kembali'];
+
+    // --- PROSES HAPUS / UPDATE FILE BA AMBIL ---
+    if (isset($_POST['hapus_ba_ambil']) && $_POST['hapus_ba_ambil'] == '1') {
+        if (!empty($d['link_ba_ambil']) && file_exists("upload/" . $d['link_ba_ambil'])) {
+            unlink("upload/" . $d['link_ba_ambil']);
+        }
+        $link_ba_ambil = "";
+    }
+    if (!empty($_FILES['link_ba_ambil']['name'])) {
+        // Hapus file lama jika ada penggantian baru
+        if(!empty($d['link_ba_ambil']) && file_exists("upload/".$d['link_ba_ambil'])) { 
+            unlink("upload/".$d['link_ba_ambil']); 
+        }
+        $ext_ambil = pathinfo($_FILES['link_ba_ambil']['name'], PATHINFO_EXTENSION);
+        $link_ba_ambil = "ba_ambil_" . uniqid() . "." . $ext_ambil;
+        move_uploaded_file($_FILES['link_ba_ambil']['tmp_name'], "upload/" . $link_ba_ambil);
+    }
+
+    // --- PROSES HAPUS / UPDATE FILE BA KEMBALI ---
+    if (isset($_POST['hapus_ba_kembali']) && $_POST['hapus_ba_kembali'] == '1') {
+        if (!empty($d['link_ba_kembali']) && file_exists("upload/" . $d['link_ba_kembali'])) {
+            unlink("upload/" . $d['link_ba_kembali']);
+        }
+        $link_ba_kembali = "";
+    }
+    if (!empty($_FILES['link_ba_kembali']['name'])) {
+        // Hapus file lama jika ada penggantian baru
+        if(!empty($d['link_ba_kembali']) && file_exists("upload/".$d['link_ba_kembali'])) { 
+            unlink("upload/".$d['link_ba_kembali']); 
+        }
+        $ext_kembali = pathinfo($_FILES['link_ba_kembali']['name'], PATHINFO_EXTENSION);
+        $link_ba_kembali = "ba_kembali_" . uniqid() . "." . $ext_kembali;
+        move_uploaded_file($_FILES['link_ba_kembali']['tmp_name'], "upload/" . $link_ba_kembali);
+    }
+
+    // --- PROSES TAMBAH DOKUMENTASI BARU (BANYAK FILE) ---
+    if (!empty($_FILES['dokumentasi']['name'][0])) {
+        foreach ($_FILES['dokumentasi']['name'] as $key => $val) {
+            if ($_FILES['dokumentasi']['error'][$key] === 0) {
+                $ext = pathinfo($_FILES['dokumentasi']['name'][$key], PATHINFO_EXTENSION);
+                $filename = "doc_" . uniqid() . "." . $ext;
+                if (move_uploaded_file($_FILES['dokumentasi']['tmp_name'][$key], "upload/" . $filename)) {
+                    $arr_dokumentasi[] = $filename; // Menambahkan file baru ke dalam array yang sudah ada
+                }
+            }
+        }
+    }
+    $dokumentasi_json = mysqli_real_escape_string($conn, json_encode($arr_dokumentasi));
+
+    $update = "UPDATE peminjaman SET 
+               nama_material = '$nama_material', 
+               asal_material = '$asal_material', 
+               tanggal_pengambilan = '$tanggal_pengambilan', 
+               peminjam = '$peminjam', 
+               jumlah = '$jumlah', 
+               satuan = '$satuan', 
+               status_kembali = '$status_kembali', 
+               jumlah_dikembalikan = '$jumlah_dikembalikan', 
+               link_ba_ambil = '$link_ba_ambil', 
+               link_ba_kembali = '$link_ba_kembali', 
+               dokumentasi = '$dokumentasi_json', 
+               keterangan = '$keterangan' 
+               WHERE id = '$id'";
+               
+    if(mysqli_query($conn, $update)){
+        echo "<script>alert('Data peminjaman berhasil diperbarui!'); window.location='peminjaman.php';</script>";
+        exit;
+    } else {
+        echo "<script>alert('Gagal memperbarui data: " . mysqli_error($conn) . "');</script>";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>I-CALM | Detail Peminjaman</title>
+    <title>I-CALM | Edit Peminjaman</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -71,18 +193,24 @@ if(!$d){
         .navbar-custom { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
         .main-body-wrapper { padding: 40px; }
         
-        /* CARD PANJANG LAYOUT */
+        /* CARD STYLE LAYOUT */
         .glass-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 40px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04); width: 100%; }
         
-        /* DETAIL FIELD STYLE */
-        .detail-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px; }
-        .detail-value { border-radius: 10px; border: 1px solid #cbd5e1; padding: 13px 18px; font-size: 0.9rem; background-color: #f8fafc; color: var(--text-main); font-weight: 600; min-height: 50px; display: flex; align-items: center; }
+        /* INPUT & LABEL STYLE */
+        .form-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px; }
+        .form-control, .form-select { border-radius: 10px; border: 1px solid #cbd5e1; padding: 13px 18px; font-size: 0.9rem; background-color: #f8fafc; transition: all 0.2s; color: var(--text-main); }
+        .form-control:focus, .form-select:focus { background-color: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
         
-        /* PHOTO CONTAINER & BERKAS */
-        .img-thumbnail-custom { width: 100%; max-width: 140px; height: 100px; object-fit: cover; border-radius: 10px; border: 1px solid #cbd5e1; transition: transform 0.2s; cursor: pointer; }
-        .img-thumbnail-custom:hover { transform: scale(1.05); }
-        .file-download-box { display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; text-decoration: none; color: #1e293b; font-size: 0.85rem; font-weight: 600; transition: background 0.2s; }
-        .file-download-box:hover { background: #f1f5f9; color: #0284c7; }
+        /* OVERLAY PREVIEW UNTUK GAMBAR DAN TOMBOL X */
+        .gallery-item-wrapper { position: relative; display: inline-block; width: 100px; height: 100px; border-radius: 10px; overflow: hidden; border: 1px solid #cbd5e1; margin-right: 10px; margin-bottom: 10px; }
+        .preview-thumb { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+        .btn-delete-overlay { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; background: rgba(239, 68, 68, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffffff; text-decoration: none; font-size: 0.7rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: all 0.2s; }
+        .btn-delete-overlay:hover { background: #dc2626; transform: scale(1.1); color: #ffffff; }
+
+        /* BADGE UNTUK FILE DOKUMEN */
+        .file-badge { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; margin-right: 6px; margin-bottom: 6px; text-decoration: none; color: #334155; font-weight: 500; }
+        .file-badge .btn-delete-file { color: #ef4444; text-decoration: none; font-size: 0.9rem; margin-left: 8px; }
+        .file-badge .btn-delete-file:hover { color: #b91c1c; }
 
         @media (max-width: 991.98px) {
             .sidebar { position: relative; width: 100%; height: auto; border-right: none; padding: 20px; }
@@ -147,116 +275,173 @@ if(!$d){
         <div class="container-fluid px-0">
             <span class="navbar-brand mb-0 h1 d-flex align-items-center">
                 <i class="fa-solid fa-boxes-stacked text-primary me-2"></i> KENDALI LOGISTIK 
-                <span class="ms-2 fw-normal" style="font-size: 0.95rem; color: var(--text-muted);">/ Kategori: Peminjaman / Detail Rincian</span>
+                <span class="ms-2 fw-normal" style="font-size: 0.95rem; color: var(--text-muted);">/ Kategori: Peminjaman / Edit Data</span>
             </span>
         </div>
     </nav>
 
     <div class="main-body-wrapper">
         <div class="glass-card">
-            <h4 class="fw-bold mb-4" style="color: #0f172a;"><i class="fa-solid fa-magnifying-glass-chart text-primary me-2"></i>Detail Rincian Peminjaman Material</h4>
+            <h4 class="fw-bold mb-4" style="color: #0f172a;"><i class="fa-solid fa-pen-to-square text-warning me-2"></i>Form Edit Peminjaman Material</h4>
             
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="detail-label">Material (Nama Material)</div>
-                    <div class="detail-value text-primary fw-bold"><?= htmlspecialchars($d['nama_material'] ?? '-'); ?></div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="detail-label">Asal Material</div>
-                    <div class="detail-value"><?= htmlspecialchars($d['asal_material'] ?? '-'); ?></div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="detail-label">Tanggal Pengambilan</div>
-                    <div class="detail-value"><?= htmlspecialchars($d['tanggal_pengambilan'] ?? '-'); ?></div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="detail-label">Peminjam Material</div>
-                    <div class="detail-value text-danger"><?= htmlspecialchars($d['peminjam'] ?? '-'); ?></div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="detail-label">Jumlah Pinjam</div>
-                    <div class="detail-value"><?= number_format((float)($d['jumlah'] ?? 0)); ?></div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="detail-label">Satuan</div>
-                    <div class="detail-value"><?= htmlspecialchars($d['satuan'] ?? '-'); ?></div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="detail-label">Status Pengembalian</div>
-                    <div class="detail-value">
-                        <span class="badge <?= (strtoupper(trim($d['status_kembali'] ?? '')) == 'SUDAH') ? 'bg-success' : 'bg-warning text-dark'; ?> px-3 py-2 fs-6" style="font-size:0.8rem !important;">
-                            <?= htmlspecialchars(strtoupper($d['status_kembali'] ?? 'BELUM')); ?>
-                        </span>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Material (Nama Material)</label>
+                        <input type="text" name="nama_material" class="form-control" value="<?= htmlspecialchars($d['nama_material'] ?? ''); ?>" required autocomplete="off">
                     </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="detail-label">Jumlah Dikembalikan</div>
-                    <div class="detail-value"><?= htmlspecialchars($d['jumlah_dikembalikan'] ?? '-'); ?></div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="detail-label">Link BA Pengambilan Material</div>
-                    <div class="detail-value">
-                        <?= !empty($d['link_ba_ambil']) ? "<a href='".htmlspecialchars($d['link_ba_ambil'])."' target='_blank' class='btn btn-sm btn-outline-primary w-100 fw-bold'><i class='fa-solid fa-arrow-up-right-from-square me-1'></i> Buka Tautan BA</a>" : "<span class='text-muted fw-normal'>-</span>"; ?>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Asal Material</label>
+                        <input type="text" name="asal_material" class="form-control" value="<?= htmlspecialchars($d['asal_material'] ?? ''); ?>" autocomplete="off">
                     </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="detail-label">Link BA Pengembalian Material</div>
-                    <div class="detail-value">
-                        <?= !empty($d['link_ba_kembali']) ? "<a href='".htmlspecialchars($d['link_ba_kembali'])."' target='_blank' class='btn btn-sm btn-outline-success w-100 fw-bold'><i class='fa-solid fa-arrow-up-right-from-square me-1'></i> Buka Tautan BA</a>" : "<span class='text-muted fw-normal'>-</span>"; ?>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Tanggal Pengambilan</label>
+                        <input type="date" name="tanggal_pengambilan" class="form-control" value="<?= htmlspecialchars($d['tanggal_pengambilan'] ?? ''); ?>" required>
                     </div>
-                </div>
-
-                <div class="col-md-12">
-                    <div class="detail-label">Dokumentasi Lampiran (Berkas &amp; Gambar)</div>
-                    <div class="detail-value d-flex flex-wrap gap-2 py-3" style="min-height: 120px;">
-                        <?php 
-                        $docs = json_decode($d['dokumentasi'] ?? '[]', true);
-                        if (!empty($docs) && is_array($docs)): 
-                            foreach ($docs as $file): 
-                                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])):
-                        ?>
-                                    <a href="upload/<?= $file; ?>" target="_blank" title="Klik untuk memperbesar">
-                                        <img src="upload/<?= $file; ?>" class="img-thumbnail-custom" alt="Foto Dokumentasi">
-                                    </a>
-                        <?php 
-                                else: 
-                        ?>
-                                    <a href="upload/<?= $file; ?>" target="_blank" class="file-download-box">
-                                        <i class="fa-solid fa-file-lines text-primary fs-4"></i>
-                                        <span><?= htmlspecialchars($file); ?></span>
-                                    </a>
-                        <?php 
-                                endif;
-                            endforeach; 
-                        else: 
-                        ?>
-                            <span class="text-muted fw-normal italic">Tidak ada berkas dokumentasi terunggah.</span>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Peminjam Material</label>
+                        <input type="text" name="peminjam" class="form-control" value="<?= htmlspecialchars($d['peminjam'] ?? ''); ?>" autocomplete="off" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Jumlah / Volume Pinjam</label>
+                        <input type="number" name="jumlah" class="form-control" min="1" value="<?= $d['jumlah'] ?? 1; ?>" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Satuan</label>
+                        <input type="text" name="satuan" class="form-control" value="<?= htmlspecialchars($d['satuan'] ?? ''); ?>" autocomplete="off" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Status Pengembalian</label>
+                        <select name="status_kembali" class="form-select">
+                            <option value="BELUM" <?= (strtoupper($d['status_kembali'] ?? '') == 'BELUM') ? 'selected' : ''; ?>>BELUM</option>
+                            <option value="SUDAH" <?= (strtoupper($d['status_kembali'] ?? '') == 'SUDAH') ? 'selected' : ''; ?>>SUDAH</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Jumlah Dikembalikan</label>
+                        <input type="text" name="jumlah_dikembalikan" class="form-control" value="<?= htmlspecialchars($d['jumlah_dikembalikan'] ?? ''); ?>" autocomplete="off">
+                    </div>
+                    
+                    <!-- FITUR INPUT FILE BA AMBIL & HAPUS FILE -->
+                    <div class="col-md-6">
+                        <label class="form-label">File BA Pengambilan Material</label>
+                        <input type="file" name="link_ba_ambil" class="form-control" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        <?php if(!empty($d['link_ba_ambil'])): ?>
+                            <div class="form-text d-flex align-items-center mt-2 text-success">
+                                <span class="me-2">File saat ini: <a href="upload/<?= $d['link_ba_ambil']; ?>" target="_blank" class="fw-semibold text-decoration-none"><?= $d['link_ba_ambil']; ?></a></span>
+                                <div class="form-check ms-auto">
+                                    <input class="form-check-input border-danger" type="checkbox" name="hapus_ba_ambil" value="1" id="delBAAmbil">
+                                    <label class="form-check-label text-danger fw-bold small" for="delBAAmbil" style="cursor: pointer;">
+                                        <i class="fa-solid fa-trash-can shadow-sm"></i> Hapus
+                                    </label>
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
-                </div>
 
-                <div class="col-md-12">
-                    <div class="detail-label">Keterangan Tambahan</div>
-                    <div class="detail-value align-items-start py-3" style="min-height: 100px;">
-                        <?= !empty($d['keterangan']) ? nl2br(htmlspecialchars($d['keterangan'])) : '<span class="text-muted fw-normal">Tidak ada catatan keterangan tambahan.</span>'; ?>
+                    <!-- FITUR INPUT FILE BA KEMBALI & HAPUS FILE -->
+                    <div class="col-md-6">
+                        <label class="form-label">File BA Pengembalian Material</label>
+                        <input type="file" name="link_ba_kembali" class="form-control" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        <?php if(!empty($d['link_ba_kembali'])): ?>
+                            <div class="form-text d-flex align-items-center mt-2 text-success">
+                                <span class="me-2">File saat ini: <a href="upload/<?= $d['link_ba_kembali']; ?>" target="_blank" class="fw-semibold text-decoration-none"><?= $d['link_ba_kembali']; ?></a></span>
+                                <div class="form-check ms-auto">
+                                    <input class="form-check-input border-danger" type="checkbox" name="hapus_ba_kembali" value="1" id="delBAKembali">
+                                    <label class="form-check-label text-danger fw-bold small" for="delBAKembali" style="cursor: pointer;">
+                                        <i class="fa-solid fa-trash-can shadow-sm"></i> Hapus
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- PRATINJAU BERKAS DENGAN TOMBOL HAPUS (X) MELAYANG -->
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Lampiran Saat Ini</label>
+                        <div class="p-3 border bg-light mb-2" style="border-radius:10px;">
+                            <?php 
+                            if(!empty($arr_dokumentasi)):
+                                $imgs = []; $docs = [];
+                                foreach($arr_dokumentasi as $file) {
+                                    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                                    if(in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) { $imgs[] = $file; } 
+                                    else { $docs[] = $file; }
+                                }
+                                
+                                // Render Khusus Gambar
+                                if(!empty($imgs)):
+                                    foreach($imgs as $img):
+                                        $filepath = "upload/" . $img;
+                                        if(file_exists($filepath)):
+                            ?>
+                                            <div class="gallery-item-wrapper">
+                                                <img src="<?= $filepath; ?>" class="preview-thumb" onclick="window.open(this.src, '_blank')" title="Klik untuk memperbesar">
+                                                <a href="edit.php?id=<?= $id; ?>&delete_file=<?= urlencode($img); ?>" class="btn-delete-overlay" title="Hapus Gambar" onclick="return confirm('Apakah Anda yakin ingin menghapus gambar ini?');">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </a>
+                                            </div>
+                            <?php 
+                                        endif;
+                                    endforeach;
+                                endif;
+
+                                // Render Khusus Dokumen Non-Gambar (PDF/Word)
+                                if(!empty($docs)):
+                                    echo '<div class="d-block mt-2">';
+                                    foreach($docs as $doc):
+                                        $filepath = "upload/" . $doc;
+                                        if(file_exists($filepath)):
+                                            $ext = strtolower(pathinfo($doc, PATHINFO_EXTENSION));
+                                            $icon = "fa-file-lines";
+                                            if($ext == 'pdf') $icon = "fa-file-pdf text-danger";
+                                            if(in_array($ext, ['doc', 'docx'])) $icon = "fa-file-word text-primary";
+                            ?>
+                                            <div class="file-badge">
+                                                <a href="<?= $filepath; ?>" target="_blank" class="text-decoration-none text-dark">
+                                                    <i class="fa-solid <?= $icon; ?> me-1"></i> <?= htmlspecialchars($doc); ?>
+                                                </a>
+                                                <a href="edit.php?id=<?= $id; ?>&delete_file=<?= urlencode($doc); ?>" class="btn-delete-file" title="Hapus dokumen" onclick="return confirm('Apakah Anda yakin ingin menghapus dokumen ini?');">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </a>
+                                            </div>
+                            <?php 
+                                        endif;
+                                    endforeach;
+                                    echo '</div>';
+                                endif;
+                            else:
+                            ?>
+                                <span class="text-muted fs-7"><i class="fa-solid fa-circle-minus me-1"></i> Belum ada lampiran berkas terunggah.</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- PERBAIKAN UTAMA: DITAMBAHKAN ATRIBUT multiple="multiple" PADA TAG INPUT -->
+                    <div class="col-md-12">
+                        <label class="form-label">Tambah Lampiran Dokumentasi Baru</label>
+                        <input type="file" name="dokumentasi[]" class="form-control" multiple="multiple" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        <div class="form-text text-muted" style="font-size: 0.75rem;">Berkas yang dipilih akan ditambahkan ke lampiran lama tanpa menghapusnya. Tekan Ctrl (Windows) / Command (Mac) untuk memilih banyak berkas sekaligus saat jendela file terbuka.</div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label">Keterangan</label>
+                        <textarea name="keterangan" class="form-control" rows="3" placeholder="Masukkan catatan opsional atau rincian tambahan di sini..."><?= htmlspecialchars($d['keterangan'] ?? ''); ?></textarea>
                     </div>
                 </div>
-            </div>
-            
-            <div class="mt-4 gap-2 d-flex">
-                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning px-4 fw-bold text-white" style="border-radius:10px;"><i class="fa-solid fa-pen-to-square me-1"></i> Edit Data</a>
-                <a href="peminjaman.php" class="btn btn-light px-4 border" style="border-radius:10px;">Kembali</a>
-            </div>
+                
+                <div class="mt-4 gap-2 d-flex">
+                    <button type="submit" name="ubah" class="btn btn-warning px-4 fw-bold text-white" style="border-radius:10px; background-color: #f59e0b; border:none;"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan Perubahan</button>
+                    <a href="peminjaman.php" class="btn btn-light px-4 border" style="border-radius:10px;">Batal</a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -266,8 +451,8 @@ if(!$d){
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            const container = this.nextElementSibling;
             this.classList.toggle('active');
+            const container = this.nextElementSibling;
             container.style.display = container.style.display === "block" ? "none" : "block";
         });
     });

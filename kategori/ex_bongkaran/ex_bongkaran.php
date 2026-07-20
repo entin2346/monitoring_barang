@@ -45,10 +45,6 @@ LIMIT $offset,$limit
 ");
 
 if(!$query){
-    die(mysqli_error($conn));
-}
-
-if(!$query){
     die("Query Gagal: " . mysqli_error($conn));
 }
 ?>
@@ -245,15 +241,11 @@ if(!$query){
                     <i class="fa-solid fa-sliders"></i> Saring
                 </button>
             </form>
-          <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-<a href="tambah.php"
-   class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2"
-   style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
-    <i class="fa-solid fa-plus"></i> Tambah
-</a>
-
-<?php } ?>
+            <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
+                <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
+                    <i class="fa-solid fa-plus"></i> Tambah
+                </a>
+            <?php } ?>
         </div>
 
         <div class="cyber-table-wrapper mb-4">
@@ -346,43 +338,95 @@ if(!$query){
                         <td><?= htmlspecialchars($d['funloct'] ?? '-'); ?></td>
                         <td><?= htmlspecialchars($d['katalog_mara'] ?? '-'); ?></td>
                         <td><?= htmlspecialchars($d['no_aset'] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($d['foto_nameplate'] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($d['foto_material'] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($d['link_ba_pemindahan'] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($d['link_ba_pemanfaatan'] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($d['link_hasil_uji'] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($d['link_ba_penggantian_mtu'] ?? $d['link_ba_penggantian'] ?? '-'); ?></td>
+                        
+                        <!-- FOTO NAMEPLATE -->
+                        <td>
+                            <?php if (!empty($d['foto_nameplate']) && $d['foto_nameplate'] !== '-'): ?>
+                                <a href="<?= htmlspecialchars($d['foto_nameplate']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                                    <i class="fa-solid fa-link me-1"></i> Foto Nameplate
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
+                        <!-- FOTO MATERIAL -->
+                        <td>
+                            <?php if (!empty($d['foto_material']) && $d['foto_material'] !== '-'): ?>
+                                <a href="<?= htmlspecialchars($d['foto_material']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                                    <i class="fa-solid fa-link me-1"></i> Foto Material
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
+                        <!-- LINK BA PEMINDAHAN -->
+                        <td>
+                            <?php if (!empty($d['link_ba_pemindahan']) && $d['link_ba_pemindahan'] !== '-'): ?>
+                                <a href="<?= htmlspecialchars($d['link_ba_pemindahan']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                                    <i class="fa-solid fa-link me-1"></i> BA Pemindahan
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
+                        <!-- LINK BA PEMANFAATAN -->
+                        <td>
+                            <?php if (!empty($d['link_ba_pemanfaatan']) && $d['link_ba_pemanfaatan'] !== '-'): ?>
+                                <a href="<?= htmlspecialchars($d['link_ba_pemanfaatan']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                                    <i class="fa-solid fa-link me-1"></i> BA Pemanfaatan
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
+                        <!-- LINK HASIL UJI -->
+                        <td>
+                            <?php if (!empty($d['link_hasil_uji']) && $d['link_hasil_uji'] !== '-'): ?>
+                                <a href="<?= htmlspecialchars($d['link_hasil_uji']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                                    <i class="fa-solid fa-link me-1"></i> Hasil Uji
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
+                        <!-- LINK BA PENGGANTIAN -->
+                        <td>
+                            <?php 
+                            $link_ba_penggantian = $d['link_ba_penggantian_mtu'] ?? $d['link_ba_penggantian'] ?? '';
+                            if (!empty($link_ba_penggantian) && $link_ba_penggantian !== '-'): 
+                            ?>
+                                <a href="<?= htmlspecialchars($link_ba_penggantian); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                                    <i class="fa-solid fa-link me-1"></i> BA Penggantian
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
                         <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
                         <td><?= htmlspecialchars($d['keterangan_tambahan'] ?? '-'); ?></td>
-                      <td class="text-center">
-    <div class="d-flex gap-1 justify-content-center">
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <!-- Semua user boleh melihat detail -->
+                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
 
-        <!-- Semua user boleh melihat detail -->
-        <a href="detail.php?id=<?= $d['id']; ?>"
-           class="btn btn-info btn-sm text-white"
-           title="Detail">
-            <i class="fa-solid fa-eye"></i>
-        </a>
-
-        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-            <a href="edit.php?id=<?= $d['id']; ?>"
-               class="btn btn-warning btn-sm text-white"
-               title="Edit">
-                <i class="fa-solid fa-pen"></i>
-            </a>
-
-            <a href="hapus.php?id=<?= $d['id']; ?>"
-               class="btn btn-danger btn-sm text-white"
-               title="Hapus"
-               onclick="return confirm('Yakin ingin menghapus data ini?')">
-                <i class="fa-solid fa-trash"></i>
-            </a>
-
-        <?php } ?>
-
-    </div>
-</td>
+                                <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
+                                    <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                <?php } ?>
+                            </div>
+                        </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

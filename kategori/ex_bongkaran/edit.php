@@ -16,29 +16,42 @@ include "../../config/koneksi.php";
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// AJAX Handler untuk menghapus gambar individu dari JSON string
+// AJAX Handler untuk menghapus gambar individu atau berkas BA
 if (isset($_POST['action']) && $_POST['action'] === 'delete_image') {
     $img_to_delete = $_POST['image_name'];
     $field = $_POST['field_name']; 
     
-    if ($id > 0 && ($field === 'foto_nameplate' || $field === 'foto_material')) {
+    if ($id > 0) {
         $get_current = mysqli_query($conn, "SELECT $field FROM ex_bongkaran WHERE id = $id");
         $current_data = mysqli_fetch_assoc($get_current);
         
         if ($current_data) {
-            $images = json_decode($current_data[$field] ?? '[]', true);
-            if (($key = array_search($img_to_delete, $images)) !== false) {
-                unset($images[$key]);
-                $images = array_values($images); 
-                $new_json = mysqli_real_escape_string($conn, json_encode($images));
-                
-                if (mysqli_query($conn, "UPDATE ex_bongkaran SET $field = '$new_json' WHERE id = $id")) {
-                    if (file_exists("upload/" . $img_to_delete)) {
-                        @unlink("upload/" . $img_to_delete);
+            $success = false;
+            // Jika kolom bertipe JSON (foto_nameplate atau foto_material)
+            if ($field === 'foto_nameplate' || $field === 'foto_material') {
+                $images = json_decode($current_data[$field] ?? '[]', true);
+                if (($key = array_search($img_to_delete, $images)) !== false) {
+                    unset($images[$key]);
+                    $images = array_values($images); 
+                    $new_json = mysqli_real_escape_string($conn, json_encode($images));
+                    if (mysqli_query($conn, "UPDATE ex_bongkaran SET $field = '$new_json' WHERE id = $id")) {
+                        $success = true;
                     }
-                    echo json_encode(['status' => 'success']);
-                    exit;
                 }
+            } 
+            // Jika kolom bertipe teks/file tunggal (BA Pemindahan, Pemanfaatan, Penggantian)
+            else if (in_array($field, ['link_ba_pemindahan', 'link_ba_pemanfaatan', 'link_ba_penggantian'])) {
+                if (mysqli_query($conn, "UPDATE ex_bongkaran SET $field = '' WHERE id = $id")) {
+                    $success = true;
+                }
+            }
+
+            if ($success) {
+                if (!empty($img_to_delete) && file_exists("upload/" . $img_to_delete)) {
+                    @unlink("upload/" . $img_to_delete);
+                }
+                echo json_encode(['status' => 'success']);
+                exit;
             }
         }
     }
@@ -88,12 +101,38 @@ if (isset($_POST['update'])) {
     $katalog_mara = mysqli_real_escape_string($conn, $_POST['katalog_mara']);
     $no_aset = mysqli_real_escape_string($conn, $_POST['no_aset']);
     $link_ba_pemindahan = mysqli_real_escape_string($conn, $_POST['link_ba_pemindahan']);
-    $link_ba_pemanfaatan = mysqli_real_escape_string($conn, $_POST['link_ba_pemanfaatan']);
     $link_hasil_uji = mysqli_real_escape_string($conn, $_POST['link_hasil_uji']);
-    $link_ba_penggantian = mysqli_real_escape_string($conn, $_POST['link_ba_penggantian']);
     $keterangan = mysqli_real_escape_string($conn, $_POST['keterangan']);
     $keterangan_tambahan = mysqli_real_escape_string($conn, $_POST['keterangan_tambahan']);
     $tanggal_update_terakhir = date('Y-m-d H:i:s');
+
+    $target_dir = "upload/";
+
+    // --- PROSES UPDATE FILE BA PEMANFAATAN ---
+    $link_ba_pemanfaatan = $data['link_ba_pemanfaatan']; // default pakai yang lama
+    if (!empty($_FILES['ba_pemanfaatan_file']['name'])) {
+        $file_name_ba_pem = time() . '_ba_pem_' . basename($_FILES['ba_pemanfaatan_file']['name']);
+        if (move_uploaded_file($_FILES['ba_pemanfaatan_file']['tmp_name'], $target_dir . $file_name_ba_pem)) {
+            // Hapus file lama jika ada
+            if (!empty($data['link_ba_pemanfaatan']) && file_exists($target_dir . $data['link_ba_pemanfaatan'])) {
+                @unlink($target_dir . $data['link_ba_pemanfaatan']);
+            }
+            $link_ba_pemanfaatan = mysqli_real_escape_string($conn, $file_name_ba_pem);
+        }
+    }
+
+    // --- PROSES UPDATE FILE BA PENGGANTIAN ---
+    $link_ba_penggantian = $data['link_ba_penggantian']; // default pakai yang lama
+    if (!empty($_FILES['ba_penggantian_file']['name'])) {
+        $file_name_ba_peng = time() . '_ba_peng_' . basename($_FILES['ba_penggantian_file']['name']);
+        if (move_uploaded_file($_FILES['ba_penggantian_file']['tmp_name'], $target_dir . $file_name_ba_peng)) {
+            // Hapus file lama jika ada
+            if (!empty($data['link_ba_penggantian']) && file_exists($target_dir . $data['link_ba_penggantian'])) {
+                @unlink($target_dir . $data['link_ba_penggantian']);
+            }
+            $link_ba_penggantian = mysqli_real_escape_string($conn, $file_name_ba_peng);
+        }
+    }
 
     // --- PROSES TAMBAH FOTO NAMEPLATE BARU ---
     $existing_np = json_decode($data['foto_nameplate'] ?? '[]', true);
@@ -104,7 +143,7 @@ if (isset($_POST['update'])) {
             if ($_FILES['new_foto_nameplate']['error'][$key] === 0) {
                 $ext = pathinfo($_FILES['new_foto_nameplate']['name'][$key], PATHINFO_EXTENSION);
                 $filename = "np_" . uniqid() . "." . $ext;
-                if (move_uploaded_file($_FILES['new_foto_nameplate']['tmp_name'][$key], "upload/" . $filename)) {
+                if (move_uploaded_file($_FILES['new_foto_nameplate']['tmp_name'][$key], $target_dir . $filename)) {
                     $existing_np[] = $filename;
                 }
             }
@@ -121,7 +160,7 @@ if (isset($_POST['update'])) {
             if ($_FILES['new_foto_material']['error'][$key] === 0) {
                 $ext = pathinfo($_FILES['new_foto_material']['name'][$key], PATHINFO_EXTENSION);
                 $filename = "mat_" . uniqid() . "." . $ext;
-                if (move_uploaded_file($_FILES['new_foto_material']['tmp_name'][$key], "upload/" . $filename)) {
+                if (move_uploaded_file($_FILES['new_foto_material']['tmp_name'][$key], $target_dir . $filename)) {
                     $existing_mat[] = $filename;
                 }
             }
@@ -209,10 +248,10 @@ if (isset($_POST['update'])) {
         .form-control { border-radius: 10px; border: 1px solid #cbd5e1; padding: 11px 16px; font-size: 0.9rem; background-color: #f8fafc; transition: all 0.2s; }
         .form-control:focus { background-color: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
         
-        /* IMAGE GALLERY WRAPPER WITH DELETE OVERLAY BUTTON */
+        /* IMAGE & FILE GALLERY PREVIEW STYLE WITH DELETE BUTTON */
         .image-wrapper { position: relative; display: inline-block; margin-right: 12px; margin-bottom: 12px; }
         .img-edit-preview { width: 110px; height: 110px; object-fit: cover; border-radius: 10px; border: 1px solid #cbd5e1; }
-        .btn-delete-img { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; background: #ef4444; color: #fff; border: none; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4); transition: transform 0.2s; }
+        .btn-delete-img { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; background: #ef4444; color: #fff; border: none; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4); transition: transform 0.2s; z-index: 10; }
         .btn-delete-img:hover { transform: scale(1.15); background: #dc2626; }
 
         @media (max-width: 991.98px) {
@@ -360,10 +399,64 @@ if (isset($_POST['update'])) {
                         <div class="form-text text-muted" style="font-size:0.75rem;">Bisa memilih lebih dari 1 file foto sekaligus.</div>
                     </div>
 
-                    <div class="col-md-6"><label class="form-label">Link BA Pemindahan</label><input type="text" name="link_ba_pemindahan" class="form-control" value="<?=htmlspecialchars($data['link_ba_pemindahan']??'');?>"></div>
-                    <div class="col-md-6"><label class="form-label">Link BA Pemanfaatan</label><input type="text" name="link_ba_pemanfaatan" class="form-control" value="<?=htmlspecialchars($data['link_ba_pemanfaatan']??'');?>"></div>
-                    <div class="col-md-6"><label class="form-label">Link Hasil Uji</label><input type="text" name="link_hasil_uji" class="form-control" value="<?=htmlspecialchars($data['link_hasil_uji']??'');?>"></div>
-                    <div class="col-md-6"><label class="form-label">Link BA Penggantian</label><input type="text" name="link_ba_penggantian" class="form-control" value="<?=htmlspecialchars($data['link_ba_penggantian'] ?? '');?>"></div>
+                    <!-- KELOLA DOKUMEN BA (PEMINDAHAN, PEMANFAATAN, PENGGANTIAN) -->
+                    <!-- BA Pemindahan (Teks) -->
+                    <div class="col-md-6">
+                        <label class="form-label">Link BA Pemindahan</label>
+                        <div class="input-group">
+                            <input type="text" name="link_ba_pemindahan" id="input-ba-pemindahan" class="form-control" value="<?=htmlspecialchars($data['link_ba_pemindahan']??'');?>" placeholder="Tautan cloud/drive Berita Acara Pemindahan">
+                            <?php if(!empty($data['link_ba_pemindahan'])): ?>
+                                <button type="button" class="btn btn-danger" onclick="deleteGalleryImage('<?=htmlspecialchars($data['link_ba_pemindahan']);?>', 'link_ba_pemindahan', 'ba-pemindahan-wrapper')">×</button>
+                            <?php endif; ?>
+                        </div>
+                        <div class="form-text text-muted small" id="ba-pemindahan-wrapper-text">
+                            <?php if(!empty($data['link_ba_pemindahan'])): ?>
+                                File aktif: <a href="<?=htmlspecialchars($data['link_ba_pemindahan']);?>" target="_blank"><?=htmlspecialchars($data['link_ba_pemindahan']);?></a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- BA Pemanfaatan (File Upload) -->
+                    <div class="col-md-6">
+                        <label class="form-label">Link BA Pemanfaatan</label>
+                        <div class="input-group">
+                            <input type="file" name="ba_pemanfaatan_file" class="form-control">
+                            <?php if(!empty($data['link_ba_pemanfaatan'])): ?>
+                                <button type="button" class="btn btn-danger" id="btn-del-ba-pemanfaatan" onclick="deleteGalleryImage('<?=htmlspecialchars($data['link_ba_pemanfaatan']);?>', 'link_ba_pemanfaatan', 'ba-pemanfaatan-wrapper')">×</button>
+                            <?php endif; ?>
+                        </div>
+                        <div class="form-text text-muted small" id="ba-pemanfaatan-wrapper-text">
+                            <?php if(!empty($data['link_ba_pemanfaatan'])): ?>
+                                File aktif: <a href="upload/<?=htmlspecialchars($data['link_ba_pemanfaatan']);?>" target="_blank"><?=htmlspecialchars($data['link_ba_pemanfaatan']);?></a>
+                            <?php else: ?>
+                                Unggah dokumen Berita Acara Pemanfaatan komponen di lapangan.
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Link Hasil Uji (Teks) -->
+                    <div class="col-md-6">
+                        <label class="form-label">Link Hasil Uji</label>
+                        <input type="text" name="link_hasil_uji" class="form-control" value="<?=htmlspecialchars($data['link_hasil_uji']??'');?>">
+                    </div>
+
+                    <!-- BA Penggantian (File Upload) -->
+                    <div class="col-md-6">
+                        <label class="form-label">Link BA Penggantian</label>
+                        <div class="input-group">
+                            <input type="file" name="ba_penggantian_file" class="form-control">
+                            <?php if(!empty($data['link_ba_penggantian'])): ?>
+                                <button type="button" class="btn btn-danger" id="btn-del-ba-penggantian" onclick="deleteGalleryImage('<?=htmlspecialchars($data['link_ba_penggantian']);?>', 'link_ba_penggantian', 'ba-penggantian-wrapper')">×</button>
+                            <?php endif; ?>
+                        </div>
+                        <div class="form-text text-muted small" id="ba-penggantian-wrapper-text">
+                            <?php if(!empty($data['link_ba_penggantian'])): ?>
+                                File aktif: <a href="upload/<?=htmlspecialchars($data['link_ba_penggantian']);?>" target="_blank"><?=htmlspecialchars($data['link_ba_penggantian']);?></a>
+                            <?php else: ?>
+                                Unggah dokumen Berita Acara Penggantian komponen di lapangan.
+                            <?php endif; ?>
+                        </div>
+                    </div>
                     
                     <div class="col-md-6"><label class="form-label">Keterangan</label><textarea name="keterangan" class="form-control" rows="2"><?=htmlspecialchars($data['keterangan']??'');?></textarea></div>
                     <div class="col-md-6"><label class="form-label">Keterangan Tambahan</label><textarea name="keterangan_tambahan" class="form-control" rows="2"><?=htmlspecialchars($data['keterangan_tambahan']??'');?></textarea></div>
@@ -390,7 +483,7 @@ if (isset($_POST['update'])) {
     });
 
     function deleteGalleryImage(imageName, fieldName, elementId) {
-        if (confirm("Apakah Anda yakin ingin menghapus file foto ini?")) {
+        if (confirm("Apakah Anda yakin ingin menghapus data / berkas ini?")) {
             const formData = new FormData();
             formData.append('action', 'delete_image');
             formData.append('image_name', imageName);
@@ -403,10 +496,35 @@ if (isset($_POST['update'])) {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    const targetEl = document.getElementById('div-' + elementId);
-                    if(targetEl) targetEl.remove();
+                    // Jika yang dihapus adalah foto nameplate atau foto material
+                    if (fieldName === 'foto_nameplate' || fieldName === 'foto_material') {
+                        const targetEl = document.getElementById('div-' + elementId);
+                        if(targetEl) targetEl.remove();
+                    } 
+                    // Jika yang dihapus adalah Link BA Pemindahan
+                    else if (fieldName === 'link_ba_pemindahan') {
+                        document.getElementById('input-ba-pemindahan').value = '';
+                        const textEl = document.getElementById('ba-pemindahan-wrapper-text');
+                        if (textEl) textEl.innerHTML = '';
+                        const btnEl = document.querySelector('[onclick*="link_ba_pemindahan"]');
+                        if (btnEl) btnEl.remove();
+                    }
+                    // Jika yang dihapus adalah Link BA Pemanfaatan
+                    else if (fieldName === 'link_ba_pemanfaatan') {
+                        const textEl = document.getElementById('ba-pemanfaatan-wrapper-text');
+                        if (textEl) textEl.innerHTML = 'Unggah dokumen Berita Acara Pemanfaatan komponen di lapangan.';
+                        const btnEl = document.getElementById('btn-del-ba-pemanfaatan');
+                        if (btnEl) btnEl.remove();
+                    }
+                    // Jika yang dihapus adalah Link BA Penggantian
+                    else if (fieldName === 'link_ba_penggantian') {
+                        const textEl = document.getElementById('ba-penggantian-wrapper-text');
+                        if (textEl) textEl.innerHTML = 'Unggah dokumen Berita Acara Penggantian komponen di lapangan.';
+                        const btnEl = document.getElementById('btn-del-ba-penggantian');
+                        if (btnEl) btnEl.remove();
+                    }
                 } else {
-                    alert('Gagal menghapus foto dari sistem.');
+                    alert('Gagal menghapus berkas dari sistem.');
                 }
             })
             .catch(error => {

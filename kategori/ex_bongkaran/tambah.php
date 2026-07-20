@@ -17,7 +17,6 @@ include "../../config/koneksi.php";
 if (isset($_POST['submit'])) {
     $unit = mysqli_real_escape_string($conn, $_POST['unit']);
     $nama_material = mysqli_real_escape_string($conn, $_POST['nama_material']);
-    $jenis_kategori = 'ex_bongkaran'; // Otomatis dikunci
     $mtu = mysqli_real_escape_string($conn, $_POST['mtu']);
     $tegangan = mysqli_real_escape_string($conn, $_POST['tegangan']);
     $merk_tipe = mysqli_real_escape_string($conn, $_POST['merk_tipe']);
@@ -49,9 +48,7 @@ if (isset($_POST['submit'])) {
     $katalog_mara = mysqli_real_escape_string($conn, $_POST['katalog_mara']);
     $no_aset = mysqli_real_escape_string($conn, $_POST['no_aset']);
     $link_ba_pemindahan = mysqli_real_escape_string($conn, $_POST['link_ba_pemindahan']);
-    $link_ba_pemanfaatan = mysqli_real_escape_string($conn, $_POST['link_ba_pemanfaatan']);
     $link_hasil_uji = mysqli_real_escape_string($conn, $_POST['link_hasil_uji']);
-    $link_ba_penggantian = mysqli_real_escape_string($conn, $_POST['link_ba_penggantian']);
     $keterangan = mysqli_real_escape_string($conn, $_POST['keterangan']);
     $keterangan_tambahan = mysqli_real_escape_string($conn, $_POST['keterangan_tambahan']);
     $tanggal_update_terakhir = date('Y-m-d H:i:s');
@@ -62,36 +59,64 @@ if (isset($_POST['submit'])) {
         mkdir($target_dir, 0777, true);
     }
 
-    // Proses multi-upload Foto Nameplate
-    $uploaded_nameplate = [];
-    if (!empty($_FILES['foto_nameplate_files']['name'][0])) {
-        foreach ($_FILES['foto_nameplate_files']['name'] as $key => $val) {
-            if ($_FILES['foto_nameplate_files']['name'][$key] != '') {
-                $file_name = time() . '_np_' . basename($_FILES['foto_nameplate_files']['name'][$key]);
-                if (move_uploaded_file($_FILES['foto_nameplate_files']['tmp_name'][$key], $target_dir . $file_name)) {
-                    $uploaded_nameplate[] = $file_name;
-                }
-            }
+    // Proses Upload BA Pemanfaatan (Single File)
+    $link_ba_pemanfaatan = "";
+    if (!empty($_FILES['ba_pemanfaatan_file']['name'])) {
+        $file_name_ba_pem = time() . '_ba_pem_' . basename($_FILES['ba_pemanfaatan_file']['name']);
+        if (move_uploaded_file($_FILES['ba_pemanfaatan_file']['tmp_name'], $target_dir . $file_name_ba_pem)) {
+            $link_ba_pemanfaatan = mysqli_real_escape_string($conn, $target_dir . $file_name_ba_pem);
         }
     }
-    $foto_nameplate = mysqli_real_escape_string($conn, json_encode($uploaded_nameplate));
+
+    // Proses Upload BA Penggantian (Single File)
+    $link_ba_penggantian_mtu = "";
+    if (!empty($_FILES['ba_penggantian_file']['name'])) {
+        $file_name_ba_peng = time() . '_ba_peng_' . basename($_FILES['ba_penggantian_file']['name']);
+        if (move_uploaded_file($_FILES['ba_penggantian_file']['tmp_name'], $target_dir . $file_name_ba_peng)) {
+            $link_ba_penggantian_mtu = mysqli_real_escape_string($conn, $target_dir . $file_name_ba_peng);
+        }
+    }
+
+    // Proses multi-upload Foto Nameplate
+    $foto_nameplate = "";
+    if (!empty($_FILES['foto_nameplate_files']['name'][0])) {
+        $file_name = time() . '_np_' . basename($_FILES['foto_nameplate_files']['name'][0]);
+        if (move_uploaded_file($_FILES['foto_nameplate_files']['tmp_name'][0], $target_dir . $file_name)) {
+            $foto_nameplate = mysqli_real_escape_string($conn, $target_dir . $file_name);
+        }
+    }
 
     // Proses multi-upload Foto Material
-    $uploaded_material = [];
+    $foto_material = "";
     if (!empty($_FILES['foto_material_files']['name'][0])) {
-        foreach ($_FILES['foto_material_files']['name'] as $key => $val) {
-            if ($_FILES['foto_material_files']['name'][$key] != '') {
-                $file_name = time() . '_mat_' . basename($_FILES['foto_material_files']['name'][$key]);
-                if (move_uploaded_file($_FILES['foto_material_files']['tmp_name'][$key], $target_dir . $file_name)) {
-                    $uploaded_material[] = $file_name;
-                }
-            }
+        $file_name = time() . '_mat_' . basename($_FILES['foto_material_files']['name'][0]);
+        if (move_uploaded_file($_FILES['foto_material_files']['tmp_name'][0], $target_dir . $file_name)) {
+            $foto_material = mysqli_real_escape_string($conn, $target_dir . $file_name);
         }
     }
-    $foto_material = mysqli_real_escape_string($conn, json_encode($uploaded_material));
 
-    $query = "INSERT INTO ex_bongkaran (unit, nama_material, jenis_kategori, mtu, tegangan, merk_tipe, no_seri, gardu_induk, lokasi_asal_eks_bongkaran, no_kontrak_penggantian, judul_kontrak_penggantian, jumlah, satuan, nilai_buku, berat, lokasi_penyimpanan, kondisi, justifikasi_kondisi, kelengkapan_aksesoris, ket_kelengkapan_aksesoris, keterangan_ex_bongkaran, status, ket_waktu_pembongkaran, no_at, nilai_perolehan, techidentno, upt, umur_operasi, umur_simpan, tahun_pembuatan, funloct, katalog_mara, no_aset, foto_nameplate, foto_material, link_ba_pemindahan, link_ba_pemanfaatan, link_hasil_uji, link_ba_penggantian, keterangan, keterangan_tambahan, tanggal_update_terakhir) 
-              VALUES ('$unit', '$nama_material', '$jenis_kategori', '$mtu', '$tegangan', '$merk_tipe', '$no_seri', '$gardu_induk', '$lokasi_asal_eks_bongkaran', '$no_kontrak_penggantian', '$judul_kontrak_penggantian', $jumlah, '$satuan', $nilai_buku, '$berat', '$lokasi_penyimpanan', '$kondisi', '$justifikasi_kondisi', '$kelengkapan_aksesoris', '$ket_kelengkapan_aksesoris', '$keterangan_ex_bongkaran', '$status', '$ket_waktu_pembongkaran', '$no_at', $nilai_perolehan, '$techidentno', '$upt', '$umur_operasi', '$umur_simpan', '$tahun_pembuatan', '$funloct', '$katalog_mara', '$no_aset', '$foto_nameplate', '$foto_material', '$link_ba_pemindahan', '$link_ba_pemanfaatan', '$link_hasil_uji', '$link_ba_penggantian', '$keterangan', '$keterangan_tambahan', '$tanggal_update_terakhir')";
+    // Query INSERT disesuaikan kolom 'link_ba_penggantian_mtu'
+    $query = "INSERT INTO ex_bongkaran (
+                unit, nama_material, mtu, tegangan, merk_tipe, no_seri, gardu_induk, 
+                lokasi_asal_eks_bongkaran, no_kontrak_penggantian, judul_kontrak_penggantian, 
+                jumlah, satuan, nilai_buku, berat, lokasi_penyimpanan, kondisi, 
+                justifikasi_kondisi, kelengkapan_aksesoris, ket_kelengkapan_aksesoris, 
+                keterangan_ex_bongkaran, status, ket_waktu_pembongkaran, no_at, 
+                nilai_perolehan, techidentno, upt, umur_operasi, umur_simpan, 
+                tahun_pembuatan, funloct, katalog_mara, no_aset, foto_nameplate, 
+                foto_material, link_ba_pemindahan, link_ba_pemanfaatan, link_hasil_uji, 
+                link_ba_penggantian_mtu, keterangan, keterangan_tambahan, tanggal_update_terakhir
+              ) VALUES (
+                '$unit', '$nama_material', '$mtu', '$tegangan', '$merk_tipe', '$no_seri', '$gardu_induk', 
+                '$lokasi_asal_eks_bongkaran', '$no_kontrak_penggantian', '$judul_kontrak_penggantian', 
+                $jumlah, '$satuan', $nilai_buku, '$berat', '$lokasi_penyimpanan', '$kondisi', 
+                '$justifikasi_kondisi', '$kelengkapan_aksesoris', '$ket_kelengkapan_aksesoris', 
+                '$keterangan_ex_bongkaran', '$status', '$ket_waktu_pembongkaran', '$no_at', 
+                $nilai_perolehan, '$techidentno', '$upt', '$umur_operasi', '$umur_simpan', 
+                '$tahun_pembuatan', '$funloct', '$katalog_mara', '$no_aset', '$foto_nameplate', 
+                '$foto_material', '$link_ba_pemindahan', '$link_ba_pemanfaatan', '$link_hasil_uji', 
+                '$link_ba_penggantian_mtu', '$keterangan', '$keterangan_tambahan', '$tanggal_update_terakhir'
+              )";
 
     if (mysqli_query($conn, $query)) {
         header("Location: ex_bongkaran.php");
@@ -399,7 +424,8 @@ if (isset($_POST['submit'])) {
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Link BA Pemanfaatan</label>
-                        <input type="text" name="link_ba_pemanfaatan" class="form-control" placeholder="Tautan cloud/drive Berita Acara Pemanfaatan">
+                        <input type="file" name="ba_pemanfaatan_file" class="form-control">
+                        <div class="form-text text-muted small">Unggah dokumen Berita Acara Pemanfaatan komponen di lapangan.</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Link Hasil Uji</label>
@@ -407,19 +433,20 @@ if (isset($_POST['submit'])) {
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Link BA Penggantian</label>
-                        <input type="text" name="link_ba_penggantian" class="form-control" placeholder="Tautan cloud/drive Berita Acara Penggantian">
+                        <input type="file" name="ba_penggantian_file" class="form-control">
+                        <div class="form-text text-muted small">Unggah dokumen Berita Acara Penggantian komponen di lapangan.</div>
                     </div>
 
-                    <!-- Bagian Unggah Multimedia Berkas Terintegrasi -->
+                    <!-- Upload Foto -->
                     <div class="col-md-6">
-                        <label class="form-label">Upload Foto Nameplate (Bisa Banyak File)</label>
-                        <input type="file" name="foto_nameplate_files[]" class="form-control" multiple>
-                        <div class="form-text text-muted small">Pilih beberapa foto sekaligus dengan menahan tombol Ctrl sewaktu mengeklik berkas.</div>
+                        <label class="form-label">Upload Foto Nameplate</label>
+                        <input type="file" name="foto_nameplate_files[]" class="form-control">
+                        <div class="form-text text-muted small">Pilih file foto nameplate.</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Upload Foto Material (Bisa Banyak File/Gambar)</label>
-                        <input type="file" name="foto_material_files[]" class="form-control" multiple>
-                        <div class="form-text text-muted small">Mendukung unggahan jamak visual kondisi fisik komponen di lapangan.</div>
+                        <label class="form-label">Upload Foto Material</label>
+                        <input type="file" name="foto_material_files[]" class="form-control">
+                        <div class="form-text text-muted small">Pilih file foto material.</div>
                     </div>
 
                     <!-- Catatan Tambahan -->
@@ -447,7 +474,6 @@ if (isset($_POST['submit'])) {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Penanganan ekspansi menu dropdown pada area sidebar secara dinamis
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();

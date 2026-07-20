@@ -15,7 +15,6 @@ if(strtolower($_SESSION['role']) != 'admin'){
 include "../../config/koneksi.php";
 
 $id = $_GET['id'] ?? 0;
-// Menggunakan tabel peminjaman agar sinkron dengan file tambah.php
 $query = mysqli_query($conn, "SELECT * FROM peminjaman WHERE id = '$id'");
 $d = mysqli_fetch_assoc($query);
 
@@ -25,29 +24,34 @@ if(!$d){
 }
 
 $arr_dokumentasi = json_decode($d['dokumentasi'] ?? '[]', true);
-if (!is_array($arr_dokumentasi)) {
-    $arr_dokumentasi = [];
-}
+if (!is_array($arr_dokumentasi)) { $arr_dokumentasi = []; }
 
-// --- FITUR PROSES HAPUS LAMPIRAN SECARA INSTAN ---
+// --- LOGIKA HAPUS DOKUMENTASI LAMPIRAN VIA GET URL (TOMBOL X BERKAS) ---
 if (isset($_GET['delete_file'])) {
     $file_to_delete = $_GET['delete_file'];
-    if (($key = array_search($file_to_delete, $arr_dokumentasi)) !== false) {
-        unset($arr_dokumentasi[$key]);
-        $arr_dokumentasi = array_values($arr_dokumentasi); // Reset indeks array
-        
-        // Hapus fisik file dari folder upload jika ada
-        if (file_exists("upload/" . $file_to_delete)) {
-            unlink("upload/" . $file_to_delete);
+    
+    // Cari index file di dalam array dokumentasi
+    $key = array_search($file_to_delete, $arr_dokumentasi);
+    if ($key !== false) {
+        // Hapus file fisik dari folder upload
+        $filepath = "upload/" . $file_to_delete;
+        if (file_exists($filepath)) {
+            unlink($filepath);
         }
         
-        $json_updated = mysqli_real_escape_string($conn, json_encode($arr_dokumentasi));
-        mysqli_query($conn, "UPDATE peminjaman SET dokumentasi = '$json_updated' WHERE id = '$id'");
-        echo "<script>alert('Lampiran berhasil dihapus!'); window.location.href='edit.php?id=$id';</script>";
+        // Buang nama file dari list array dokumentasi
+        unset($arr_dokumentasi[$key]);
+        $arr_dokumentasi = array_values($arr_dokumentasi); // Reset index array
+        
+        $dokumentasi_json = mysqli_real_escape_string($conn, json_encode($arr_dokumentasi));
+        mysqli_query($conn, "UPDATE peminjaman SET dokumentasi = '$dokumentasi_json' WHERE id = '$id'");
+        
+        echo "<script>alert('Lampiran berhasil dihapus!'); window.location='edit.php?id=$id';</script>";
         exit;
     }
 }
 
+// --- LOGIKA PROSES SUBMIT / TOMBOL UBAH DIPENCET ---
 if(isset($_POST['ubah'])){
     $nama_material = mysqli_real_escape_string($conn, $_POST['nama_material']);
     $asal_material = mysqli_real_escape_string($conn, $_POST['asal_material']);
@@ -57,16 +61,48 @@ if(isset($_POST['ubah'])){
     $satuan = mysqli_real_escape_string($conn, $_POST['satuan']);
     $status_kembali = mysqli_real_escape_string($conn, $_POST['status_kembali']);
     $jumlah_dikembalikan = mysqli_real_escape_string($conn, $_POST['jumlah_dikembalikan']);
-    $link_ba_ambil = mysqli_real_escape_string($conn, $_POST['link_ba_ambil']);
-    $link_ba_kembali = mysqli_real_escape_string($conn, $_POST['link_ba_kembali']);
     $keterangan = mysqli_real_escape_string($conn, $_POST['keterangan']);
 
-    // --- PROSES UNGGAH BANYAK FOTO / BERKAS BARU (MENGGABUNGKAN KEDALAM ARRAY) ---
-    if (!empty($_FILES['dokumentasi']['name'][0])) {
-        if (!is_dir('upload')) {
-            mkdir('upload', 0777, true);
+    // Gunakan file lama sebagai nilai default database
+    $link_ba_ambil = $d['link_ba_ambil'];
+    $link_ba_kembali = $d['link_ba_kembali'];
+
+    // --- PROSES HAPUS / UPDATE FILE BA AMBIL ---
+    if (isset($_POST['hapus_ba_ambil']) && $_POST['hapus_ba_ambil'] == '1') {
+        if (!empty($d['link_ba_ambil']) && file_exists("upload/" . $d['link_ba_ambil'])) {
+            unlink("upload/" . $d['link_ba_ambil']);
         }
-        
+        $link_ba_ambil = "";
+    }
+    if (!empty($_FILES['link_ba_ambil']['name'])) {
+        // Hapus file lama jika ada penggantian baru
+        if(!empty($d['link_ba_ambil']) && file_exists("upload/".$d['link_ba_ambil'])) { 
+            unlink("upload/".$d['link_ba_ambil']); 
+        }
+        $ext_ambil = pathinfo($_FILES['link_ba_ambil']['name'], PATHINFO_EXTENSION);
+        $link_ba_ambil = "ba_ambil_" . uniqid() . "." . $ext_ambil;
+        move_uploaded_file($_FILES['link_ba_ambil']['tmp_name'], "upload/" . $link_ba_ambil);
+    }
+
+    // --- PROSES HAPUS / UPDATE FILE BA KEMBALI ---
+    if (isset($_POST['hapus_ba_kembali']) && $_POST['hapus_ba_kembali'] == '1') {
+        if (!empty($d['link_ba_kembali']) && file_exists("upload/" . $d['link_ba_kembali'])) {
+            unlink("upload/" . $d['link_ba_kembali']);
+        }
+        $link_ba_kembali = "";
+    }
+    if (!empty($_FILES['link_ba_kembali']['name'])) {
+        // Hapus file lama jika ada penggantian baru
+        if(!empty($d['link_ba_kembali']) && file_exists("upload/".$d['link_ba_kembali'])) { 
+            unlink("upload/".$d['link_ba_kembali']); 
+        }
+        $ext_kembali = pathinfo($_FILES['link_ba_kembali']['name'], PATHINFO_EXTENSION);
+        $link_ba_kembali = "ba_kembali_" . uniqid() . "." . $ext_kembali;
+        move_uploaded_file($_FILES['link_ba_kembali']['tmp_name'], "upload/" . $link_ba_kembali);
+    }
+
+    // --- PROSES TAMBAH DOKUMENTASI BARU ---
+    if (!empty($_FILES['dokumentasi']['name'][0])) {
         foreach ($_FILES['dokumentasi']['name'] as $key => $val) {
             if ($_FILES['dokumentasi']['error'][$key] === 0) {
                 $ext = pathinfo($_FILES['dokumentasi']['name'][$key], PATHINFO_EXTENSION);
@@ -77,7 +113,6 @@ if(isset($_POST['ubah'])){
             }
         }
     }
-    
     $dokumentasi_json = mysqli_real_escape_string($conn, json_encode($arr_dokumentasi));
 
     $update = "UPDATE peminjaman SET 
@@ -263,7 +298,7 @@ if(isset($_POST['ubah'])){
                     
                     <div class="col-md-6">
                         <label class="form-label">Tanggal Pengambilan</label>
-                        <input type="date" name="tanggal_pengambilan" class="form-control" value="<?= htmlspecialchars($d['tanggal_pengambilan'] ?? ''); ?>" required>
+                        <input type="date" name="tanggal_pengambilan" class="form-control" value="<?= htmlspecialchars($d['tanggal_pengambilan'] ?? ''); ?>">
                     </div>
                     
                     <div class="col-md-6">
@@ -294,18 +329,42 @@ if(isset($_POST['ubah'])){
                         <input type="text" name="jumlah_dikembalikan" class="form-control" value="<?= htmlspecialchars($d['jumlah_dikembalikan'] ?? ''); ?>" autocomplete="off">
                     </div>
                     
+                    <!-- FITUR INPUT FILE BA AMBIL & HAPUS FILE -->
                     <div class="col-md-6">
-                        <label class="form-label">Link BA Pengambilan Material</label>
-                        <input type="url" name="link_ba_ambil" class="form-control" value="<?= htmlspecialchars($d['link_ba_ambil'] ?? ''); ?>" autocomplete="off">
+                        <label class="form-label">File BA Pengambilan Material</label>
+                        <input type="file" name="link_ba_ambil" class="form-control" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        <?php if(!empty($d['link_ba_ambil'])): ?>
+                            <div class="form-text d-flex align-items-center mt-2 text-success">
+                                <span class="me-2">File saat ini: <a href="upload/<?= $d['link_ba_ambil']; ?>" target="_blank" class="fw-semibold text-decoration-none"><?= $d['link_ba_ambil']; ?></a></span>
+                                <div class="form-check ms-auto">
+                                    <input class="form-check-input border-danger" type="checkbox" name="hapus_ba_ambil" value="1" id="delBAAmbil">
+                                    <label class="form-check-label text-danger fw-bold small" for="delBAAmbil" style="cursor: pointer;">
+                                        <i class="fa-solid fa-trash-can shadow-sm"></i> Hapus
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    
+
+                    <!-- FITUR INPUT FILE BA KEMBALI & HAPUS FILE -->
                     <div class="col-md-6">
-                        <label class="form-label">Link BA Pengembalian Material</label>
-                        <input type="url" name="link_ba_kembali" class="form-control" value="<?= htmlspecialchars($d['link_ba_kembali'] ?? ''); ?>" autocomplete="off">
+                        <label class="form-label">File BA Pengembalian Material</label>
+                        <input type="file" name="link_ba_kembali" class="form-control" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        <?php if(!empty($d['link_ba_kembali'])): ?>
+                            <div class="form-text d-flex align-items-center mt-2 text-success">
+                                <span class="me-2">File saat ini: <a href="upload/<?= $d['link_ba_kembali']; ?>" target="_blank" class="fw-semibold text-decoration-none"><?= $d['link_ba_kembali']; ?></a></span>
+                                <div class="form-check ms-auto">
+                                    <input class="form-check-input border-danger" type="checkbox" name="hapus_ba_kembali" value="1" id="delBAKembali">
+                                    <label class="form-check-label text-danger fw-bold small" for="delBAKembali" style="cursor: pointer;">
+                                        <i class="fa-solid fa-trash-can shadow-sm"></i> Hapus
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- PRATINJAU BERKAS DENGAN TOMBOL HAPUS (X) MELAYANG -->
-                    <div class="col-md-12">
+                    <div class="col-md-12 mt-3">
                         <label class="form-label">Lampiran Saat Ini</label>
                         <div class="p-3 border bg-light mb-2" style="border-radius:10px;">
                             <?php 

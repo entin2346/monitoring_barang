@@ -23,21 +23,32 @@ if(isset($_POST['simpan'])){
     $satuan = mysqli_real_escape_string($conn, $_POST['satuan']);
     $status_kembali = mysqli_real_escape_string($conn, $_POST['status_kembali']);
     $jumlah_dikembalikan = mysqli_real_escape_string($conn, $_POST['jumlah_dikembalikan']);
-    $link_ba_ambil = mysqli_real_escape_string($conn, $_POST['link_ba_ambil']);
-    $link_ba_kembali = mysqli_real_escape_string($conn, $_POST['link_ba_kembali']);
     $keterangan = mysqli_real_escape_string($conn, $_POST['keterangan']);
     
-    // Otomatis dikunci ke Peminjaman
-    $jenis_kategori = "Peminjaman"; 
+    // Pastikan folder upload ada
+    if (!is_dir('upload')) {
+        mkdir('upload', 0777, true);
+    }
+
+    // --- PROSES UNGGAH FILE BA AMBIL ---
+    $link_ba_ambil = "";
+    if (!empty($_FILES['link_ba_ambil']['name'])) {
+        $ext_ambil = pathinfo($_FILES['link_ba_ambil']['name'], PATHINFO_EXTENSION);
+        $link_ba_ambil = "ba_ambil_" . uniqid() . "." . $ext_ambil;
+        move_uploaded_file($_FILES['link_ba_ambil']['tmp_name'], "upload/" . $link_ba_ambil);
+    }
+
+    // --- PROSES UNGGAH FILE BA KEMBALI ---
+    $link_ba_kembali = "";
+    if (!empty($_FILES['link_ba_kembali']['name'])) {
+        $ext_kembali = pathinfo($_FILES['link_ba_kembali']['name'], PATHINFO_EXTENSION);
+        $link_ba_kembali = "ba_kembali_" . uniqid() . "." . $ext_kembali;
+        move_uploaded_file($_FILES['link_ba_kembali']['tmp_name'], "upload/" . $link_ba_kembali);
+    }
 
     // --- PROSES UNGGAH BANYAK FOTO / BERKAS DOKUMENTASI ---
     $arr_dokumentasi = [];
     if (!empty($_FILES['dokumentasi']['name'][0])) {
-        // Buat folder upload jika belum ada
-        if (!is_dir('upload')) {
-            mkdir('upload', 0777, true);
-        }
-        
         foreach ($_FILES['dokumentasi']['name'] as $key => $val) {
             if ($_FILES['dokumentasi']['error'][$key] === 0) {
                 $ext = pathinfo($_FILES['dokumentasi']['name'][$key], PATHINFO_EXTENSION);
@@ -48,7 +59,6 @@ if(isset($_POST['simpan'])){
             }
         }
     }
-    // Mengubah array file menjadi string JSON untuk disimpan di database
     $dokumentasi_json = mysqli_real_escape_string($conn, json_encode($arr_dokumentasi));
 
     $query = "INSERT INTO peminjaman (nama_material, asal_material, tanggal_pengambilan, peminjam, jumlah, satuan, status_kembali, jumlah_dikembalikan, link_ba_ambil, link_ba_kembali, dokumentasi, keterangan) 
@@ -210,22 +220,22 @@ if(isset($_POST['simpan'])){
                     
                     <div class="col-md-6">
                         <label class="form-label">Tanggal Pengambilan</label>
-                        <input type="date" name="tanggal_pengambilan" class="form-control" required>
+                        <input type="date" name="tanggal_pengambilan" class="form-control">
                     </div>
                     
                     <div class="col-md-6">
                         <label class="form-label">Peminjam Material</label>
-                        <input type="text" name="peminjam" class="form-control" placeholder="Nama instansi atau personil..." autocomplete="off" required>
+                        <input type="text" name="peminjam" class="form-control" placeholder="Nama instansi atau personil..." autocomplete="off">
                     </div>
                     
                     <div class="col-md-6">
                         <label class="form-label">Jumlah / Volume Pinjam</label>
-                        <input type="number" name="jumlah" class="form-control" min="1" value="1" required>
+                        <input type="number" name="jumlah" class="form-control" min="1" value="1">
                     </div>
                     
                     <div class="col-md-6">
                         <label class="form-label">Satuan</label>
-                        <input type="text" name="satuan" class="form-control" placeholder="Contoh: PCS, MTR, SET, dll" autocomplete="off" required>
+                        <input type="text" name="satuan" class="form-control" placeholder="Contoh: PCS, MTR, SET, dll" autocomplete="off">
                     </div>
                     
                     <div class="col-md-6">
@@ -242,13 +252,13 @@ if(isset($_POST['simpan'])){
                     </div>
                     
                     <div class="col-md-6">
-                        <label class="form-label">Link BA Pengambilan Material</label>
-                        <input type="url" name="link_ba_ambil" class="form-control" placeholder="https://drive.google.com/..." autocomplete="off">
+                        <label class="form-label">File BA Pengambilan Material</label>
+                        <input type="file" name="link_ba_ambil" class="form-control" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                     </div>
-                    
+
                     <div class="col-md-6">
-                        <label class="form-label">Link BA Pengembalian Material</label>
-                        <input type="url" name="link_ba_kembali" class="form-control" placeholder="https://drive.google.com/..." autocomplete="off">
+                        <label class="form-label">File BA Pengembalian Material</label>
+                        <input type="file" name="link_ba_kembali" class="form-control" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                     </div>
 
                     <div class="col-md-12">

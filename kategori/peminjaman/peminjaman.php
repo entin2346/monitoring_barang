@@ -270,34 +270,59 @@ if(!$query){
                         <td><span class="badge bg-warning text-dark px-2 py-1"><?= number_format((float)($d['jumlah'] ?? 0)); ?></span></td>
                         <td><?= htmlspecialchars($d['satuan'] ?? '-'); ?></td>
                         
-                        <td>
-                            <?php
-                            $status = strtoupper(trim($d['status_kembali'] ?? ''));
-                            if ($status == 'SUDAH') {
-                                echo '<span class="badge bg-success">SUDAH</span>';
-                            } else {
-                                echo '<span class="badge bg-warning text-dark">BELUM</span>';
-                            }
-                            ?>
-                        </td>
+                        <!-- KODE BARU (OTOMATIS) -->
+<td>
+    <?php
+    $jumlah_pinjam = (int)($d['jumlah'] ?? 0);
+    $jumlah_kembali = (int)($d['jumlah_dikembalikan'] ?? 0);
+    $status_manual = strtoupper(trim($d['status_kembali'] ?? ''));
+
+    // Jika jumlah dikembalikan sama atau lebih besar dari jumlah pinjam, 
+    // ATAU jika status manualnya memang sudah di-set "SUDAH"
+    if (($jumlah_kembali >= $jumlah_pinjam && $jumlah_pinjam > 0) || $status_manual == 'SUDAH') {
+        echo '<span class="badge bg-success">SUDAH</span>';
+    } else {
+        echo '<span class="badge bg-warning text-dark">BELUM</span>';
+    }
+    ?>
+</td>
                         <td><?= htmlspecialchars($d['jumlah_dikembalikan'] ?? '-'); ?></td>
                         
-                        <td>
-                            <?php if(!empty($d['link_ba_ambil'])): ?>
-                                <a href="<?= htmlspecialchars($d['link_ba_ambil']); ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-link"></i> BA Ambil</a>
-                            <?php else: ?> - <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if(!empty($d['link_ba_kembali'])): ?>
-                                <a href="<?= htmlspecialchars($d['link_ba_kembali']); ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-link"></i> BA Kembali</a>
-                            <?php else: ?> - <?php endif; ?>
-                        </td>
+                      <td>
+    <?php if(!empty($d['link_ba_ambil'])): ?>
+        <a href="upload/<?= htmlspecialchars($d['link_ba_ambil']); ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-link"></i> BA Ambil</a>
+    <?php else: ?> - <?php endif; ?>
+</td>
+<td>
+    <?php if(!empty($d['link_ba_kembali'])): ?>
+        <a href="upload/<?= htmlspecialchars($d['link_ba_kembali']); ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-link"></i> BA Kembali</a>
+    <?php else: ?> - <?php endif; ?>
+</td>
                         
-                        <td>
-                            <?php if(!empty($d['dokumentasi'])): ?>
-                                <a href="<?= htmlspecialchars($d['dokumentasi']); ?>" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-image"></i> Lihat</a>
-                            <?php else: ?> - <?php endif; ?>
-                        </td>
+                       <!-- KODE BARU YANG SUDAH DIPERBAIKI -->
+<td>
+    <?php 
+    // Ubah string JSON dari database menjadi array PHP
+    $docs = json_decode($d['dokumentasi'] ?? '[]', true); 
+    
+    if(!empty($docs) && is_array($docs)): 
+        foreach($docs as $index => $file):
+            // Tentukan icon berdasarkan ekstensi file
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            $icon = in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']) ? 'fa-image' : 'fa-file-lines';
+            
+            // Berikan folder path 'upload/' di depan nama file
+            ?>
+            <a href="upload/<?= htmlspecialchars($file); ?>" target="_blank" class="btn btn-xs btn-outline-secondary me-1 mb-1" style="font-size: 0.75rem;">
+                <i class="fa-solid <?= $icon; ?>"></i> File <?= $index + 1; ?>
+            </a>
+            <?php 
+        endforeach;
+    else: 
+        echo '-'; 
+    endif; 
+    ?>
+</td>
                         <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
                      <td class="text-center">
     <div class="btn-group gap-1">
