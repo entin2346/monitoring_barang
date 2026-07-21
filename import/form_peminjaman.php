@@ -19,6 +19,7 @@ if (isset($_POST['submit_import'])) {
             
             $sukses_insert = 0;
             $gagal_insert = 0;
+            $index = 0; // Penghitung baris
             
             // Otomatis mendeteksi pemisah Excel (, atau ;)
             $firstLine = fgets($handle);
@@ -27,10 +28,17 @@ if (isset($_POST['submit_import'])) {
             
             while (($row = fgetcsv($handle, 10000, $delimiter)) !== FALSE) {
                 
+                // LEWATI 3 BARIS HEADER (Baris 0: Kosong, Baris 1: Header Utama, Baris 2: Sub-header)
+                if ($index < 3) {
+                    $index++;
+                    continue;
+                }
+                
                 // Bersihkan spasi di setiap data kolom
                 $row = array_map('trim', $row);
                 
                 if (empty($row) || !isset($row[0])) {
+                    $index++;
                     continue;
                 }
 
@@ -39,22 +47,39 @@ if (isset($_POST['submit_import'])) {
                 
                 // FILTER: Pastikan kolom pertama adalah nomor urut berbentuk angka (1, 2, 3...)
                 if ($no_urut === '' || !is_numeric($no_urut)) {
+                    $index++;
                     continue; 
                 }
 
                 // Ambil Nama Material (Kolom ke-2 / Indeks 1)
                 $nama_material = isset($row[1]) ? $row[1] : '';
                 if ($nama_material === '') {
+                    $index++;
                     continue; 
                 }
 
-                // PEMETAAN INDEKS MATRIKS CSV SESUAI DATA URUT ANDA
+                // PEMETAAN INDEKS CSV
                 $nama_material   = mysqli_real_escape_string($conn, $nama_material);
                 $asal_material   = mysqli_real_escape_string($conn, $row[2] ?? '-'); 
                 
-                // Jika tanggal kosong di CSV, berikan tanggal hari ini atau tanda '-' agar database tidak error
-                $tanggal_raw     = isset($row[3]) && $row[3] !== '' ? $row[3] : date('Y-m-d');
-                $tanggal         = mysqli_real_escape_string($conn, $tanggal_raw);  
+                // --- PENANGANAN FORMAT TANGGAL ---
+                $tanggal_raw = $row[3] ?? '';
+                $tanggal_pengambilan = 'NULL'; // Default NULL jika kosong di CSV
+
+                if ($tanggal_raw !== '') {
+                    // Terjemahkan nama bulan Indonesia ke Inggris agar dibaca strtotime()
+                    $tanggal_clean = str_ireplace(
+                        ['Agustus', 'Mei', 'Desember', 'Januari', 'Februari', 'Maret', 'Oktober', 'Nopember'],
+                        ['August',  'May', 'December', 'January', 'February', 'March', 'October', 'November'],
+                        $tanggal_raw
+                    );
+                    
+                    $time = strtotime($tanggal_clean);
+                    if ($time) {
+                        $tgl_format = date('Y-m-d', $time);
+                        $tanggal_pengambilan = "'$tgl_format'"; // Tambahkan kutip untuk SQL
+                    } 
+                }
                 
                 $peminjam        = mysqli_real_escape_string($conn, $row[4] ?? '-');
                 $satuan          = mysqli_real_escape_string($conn, $row[6] ?? '');
@@ -73,13 +98,13 @@ if (isset($_POST['submit_import'])) {
                 $link_ba_kembali = mysqli_real_escape_string($conn, $row[12] ?? '');
                 $dokumentasi     = mysqli_real_escape_string($conn, $row[13] ?? '');
 
-                // Gabungkan informasi pelengkap ke dalam kolom Keterangan di halaman monitoring
+                // Gabungkan informasi pelengkap ke dalam kolom Keterangan
                 $keterangan_gabungan = "Status: " . $status_kembali . " | Kembali: " . $jml_kembali . " " . $satuan . " | Ket: " . $catatan;
                 $keterangan_gabungan = mysqli_real_escape_string($conn, $keterangan_gabungan);
                 
                 $jenis_kategori = 'peminjaman'; 
                 
-                // QUERY INSERT
+                // QUERY INSERT KE TABEL PEMINJAMAN
                 $query = "INSERT INTO peminjaman
                 (
                 nama_material,
@@ -99,7 +124,7 @@ if (isset($_POST['submit_import'])) {
                 (
                 '$nama_material',
                 '$asal_material',
-                '$tanggal',
+                $tanggal_pengambilan,
                 '$peminjam',
                 '$jumlah',
                 '$satuan',
@@ -113,63 +138,60 @@ if (isset($_POST['submit_import'])) {
                           
                 if (mysqli_query($conn, $query)) {
 
-    // ==================================
-    // MASUKKAN JUGA KE MATERIAL_GUDANG
-    // ==================================
+                    // ==================================
+                    // MASUKKAN JUGA KE MATERIAL_GUDANG
+                    // ==================================
+                    $cek_tgl_cond = ($tanggal_pengambilan == 'NULL') ? "tanggal IS NULL" : "tanggal = $tanggal_pengambilan";
 
-    $cek = mysqli_query($conn,"
-        SELECT id
-        FROM material_gudang
-        WHERE nama_material='$nama_material'
-        AND tanggal='$tanggal'
-        AND jenis_kategori='Peminjaman'
-        LIMIT 1
-    ");
+                    $cek = mysqli_query($conn,"
+                        SELECT id
+                        FROM material_gudang
+                        WHERE nama_material='$nama_material'
+                        AND $cek_tgl_cond
+                        AND jenis_kategori='Peminjaman'
+                        LIMIT 1
+                    ");
 
-    if(mysqli_num_rows($cek)==0){
+                    if(mysqli_num_rows($cek) == 0){
+                        mysqli_query($conn,"
+                            INSERT INTO material_gudang
+                            (
+                                nama_material,
+                                satuan,
+                                jumlah,
+                                kondisi,
+                                lokasi_penyimpanan,
+                                keterangan,
+                                dokumentasi,
+                                sumber_barang,
+                                jenis_kategori,
+                                tanggal
+                            )
+                            VALUES
+                            (
+                                '$nama_material',
+                                '$satuan',
+                                '$jumlah',
+                                'Dipinjam',
+                                '$asal_material',
+                                '$keterangan_gabungan',
+                                '$dokumentasi',
+                                'Peminjaman',
+                                'Peminjaman',
+                                $tanggal_pengambilan
+                            )
+                        ");
+                    }
 
-        mysqli_query($conn,"
-            INSERT INTO material_gudang
-            (
-                nama_material,
-                satuan,
-                jumlah,
-                kondisi,
-                lokasi_penyimpanan,
-                keterangan,
-                dokumentasi,
-                sumber_barang,
-                jenis_kategori,
-                tanggal
-            )
-            VALUES
-            (
-                '$nama_material',
-                '$satuan',
-                '$jumlah',
-                'Dipinjam',
-                '$asal_material',
-                '$keterangan_gabungan',
-                '$dokumentasi',
-                'Peminjaman',
-                'Peminjaman',
-                '$tanggal'
-            )
-        ");
-
-    }
-
-    $sukses_insert++;
-
-} else {
-
-    $gagal_insert++;
-
-}
+                    $sukses_insert++;
+                } else {
+                    $gagal_insert++;
+                }
+                
+                $index++;
             }
             fclose($handle);
             
-            // FIX: Mengarahkan rute dengan benar setelah berhasil mengimpor data
             echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Peminjaman! Gagal: $gagal_insert'); window.location='../kategori/peminjaman/peminjaman.php';</script>";
             exit;
         } else {
@@ -314,7 +336,7 @@ $res_peminjaman = mysqli_fetch_assoc($q_peminjaman);
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
-     <div class="dropdown-container" style="display: block;">
+    <div class="dropdown-container" style="display: block;">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
         <a href="../import/form_stok.php">Import Stok</a>
@@ -356,7 +378,7 @@ $res_peminjaman = mysqli_fetch_assoc($q_peminjaman);
                             <i class="fa-solid fa-upload text-primary me-2"></i> Import CSV - Peminjaman
                         </h5>
                         <span class="badge bg-info text-dark fw-bold px-3 py-2" style="border-radius: 8px;">
-                            Total Data: <?= number_format($res_peminjaman['total_peminjaman']); ?> Item
+                            Total Data: <?= number_format($res_peminjaman['total_peminjaman'] ?? 0); ?> Item
                         </span>
                     </div>
 

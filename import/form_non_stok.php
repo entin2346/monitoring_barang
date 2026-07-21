@@ -9,7 +9,7 @@ if(!isset($_SESSION['login'])){
 
 include "../config/koneksi.php";
 
-// 2. PROSES BACKEND CSV NON STOK
+// 2. PROSES IMPORT CSV NON STOK
 if (isset($_POST['submit_import'])) {
     if (isset($_FILES['file_csv']) && $_FILES['file_csv']['error'] == 0) {
         
@@ -18,57 +18,80 @@ if (isset($_POST['submit_import'])) {
         if (($handle = fopen($filename, "r")) !== FALSE) {
             
             $sukses_insert = 0;
-            $gagal_insert = 0;
-            $index = 0;
+            $gagal_insert  = 0;
+            $dilewati      = 0;
+            $index         = 0;
             
-            while (($row = fgetcsv($handle, 10000, ",")) !== FALSE) {
+            // Deteksi pembatas CSV (koma atau titik koma)
+            $first_line = fgets($handle);
+            $separator  = (strpos($first_line, ';') !== FALSE) ? ';' : ',';
+            rewind($handle);
+            
+            while (($row = fgetcsv($handle, 10000, $separator)) !== FALSE) {
                 
-                // Lewati baris pertama karena merupakan Header/Judul Kolom CSV
+                // Lewati baris 0 (Header / Judul Kolom)
                 if ($index == 0) {
                     $index++;
                     continue;
                 }
                 
-                // Pemetaan Kolom CSV berdasarkan gambar tabel Stok / Non Stok:
-                $nama_material      = mysqli_real_escape_string($conn, $row[1] ?? '');  // Kolom B
-                $kategori_sub       = mysqli_real_escape_string($conn, $row[2] ?? '');  // Kolom C
-                $satuan             = mysqli_real_escape_string($conn, $row[3] ?? '');  // Kolom D
-                $jumlah_stok        = mysqli_real_escape_string($conn, $row[4] ?? 0);   // Kolom E
-                $no_rak             = mysqli_real_escape_string($conn, $row[5] ?? '');  // Kolom F
-                $status_kondisi     = mysqli_real_escape_string($conn, $row[6] ?? '');  // Kolom G
-                $lokasi_penyimpanan = mysqli_real_escape_string($conn, $row[7] ?? '');  // Kolom H
+                // PEMETAAN KOLOM CSV SESUAI STRUKTUR CSV DATABASE BA:
+                // $row[3]  = NAMA BARANG
+                // $row[7]  = SATUAN
+                // $row[8]  = JUMLAH
+                // $row[9]  = TUJUAN (LOKASI PENYIMPANAN)
+                // $row[10] = KONDISI MATERIAL
+                // $row[15] = KETERANGAN
                 
-                // Tanda pengunci jenis kategori halaman otomatis menjadi non_stok
-                $jenis_kategori     = 'non_stok'; 
-
-                // Lewati baris jika nama material kosong
-                if (empty(trim($nama_material))) {
+                $nama_material      = mysqli_real_escape_string($conn, trim($row[3] ?? ''));  
+                $satuan             = mysqli_real_escape_string($conn, trim($row[7] ?? ''));  
+                
+                // Cleansing angka Jumlah
+                $jumlah_raw         = preg_replace('/[^0-9.]/', '', $row[8] ?? '0');
+                $jumlah_stok        = is_numeric($jumlah_raw) ? $jumlah_raw : 0;              
+                
+                $lokasi_penyimpanan = mysqli_real_escape_string($conn, trim($row[9] ?? ''));  
+                $status_kondisi     = mysqli_real_escape_string($conn, trim($row[10] ?? '')); 
+                $keterangan_csv     = mysqli_real_escape_string($conn, trim($row[15] ?? '')); 
+                
+                // A. Lewati jika nama material kosong
+                if (empty($nama_material)) {
+                    $index++;
                     continue;
                 }
                 
-                // Query Insert Data menyesuaikan kolom database Anda
+                // B. FILTER UTAMA KOLOM KETERANGAN NON STOK
+                // Hanya memproses data jika kolom KETERANGAN memuat kata 'NON STOK'
+                if (strpos(strtoupper($keterangan_csv), 'NON STOK') === FALSE) {
+                    $dilewati++;
+                    $index++;
+                    continue; 
+                }
+
+                // Tanda pengunci jenis kategori
+                $jenis_kategori = 'non_stok'; 
+
+                // Query Insert
                 $query = "INSERT INTO material_gudang
-(
-    nama_material,
-    keterangan,
-    satuan,
-    jumlah,
-    no_rak,
-    kondisi,
-    lokasi_penyimpanan,
-    jenis_kategori
-)
-VALUES
-(
-    '$nama_material',
-    '$kategori_sub',
-    '$satuan',
-    '$jumlah_stok',
-    '$no_rak',
-    '$status_kondisi',
-    '$lokasi_penyimpanan',
-    '$jenis_kategori'
-)";
+                (
+                    nama_material,
+                    keterangan,
+                    satuan,
+                    jumlah,
+                    kondisi,
+                    lokasi_penyimpanan,
+                    jenis_kategori
+                )
+                VALUES
+                (
+                    '$nama_material',
+                    '$keterangan_csv',
+                    '$satuan',
+                    '$jumlah_stok',
+                    '$status_kondisi',
+                    '$lokasi_penyimpanan',
+                    '$jenis_kategori'
+                )";
                           
                 if (mysqli_query($conn, $query)) {
                     $sukses_insert++;
@@ -79,17 +102,20 @@ VALUES
             }
             fclose($handle);
             
-            echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Non Stok! Gagal: $gagal_insert'); window.location='../kategori/non_stok/non_stok.php';</script>";
+            echo "<script>
+                alert('Proses Import Selesai!\\n\\n• Berhasil Disimpan (Non Stok): $sukses_insert Data\\n• Dilewati (Bukan Keterangan Non Stok): $dilewati Data\\n• Gagal Disimpan: $gagal_insert Data'); 
+                window.location='../kategori/non_stok/non_stok.php';
+            </script>";
             exit;
         } else {
             echo "<script>alert('Gagal membuka file CSV.');</script>";
         }
     } else {
-        echo "<script>alert('Terjadi kesalahan upload file.');</script>";
+        echo "<script>alert('Terjadi kesalahan upload file CSV.');</script>";
     }
 }
 
-// 3. AMBIL STATISTIK UNTUK TAMPILAN INFORMASI HALAMAN NON STOK
+// 3. AMBIL STATISTIK DARI TABEL MATERIAL_GUDANG UNTUK TAMPILAN PAGE
 $q_non_stok = mysqli_query($conn, "SELECT COUNT(*) as total_non_stok FROM material_gudang WHERE jenis_kategori = 'non_stok'");
 $res_non_stok = mysqli_fetch_assoc($q_non_stok);
 ?>
@@ -215,12 +241,11 @@ $res_non_stok = mysqli_fetch_assoc($q_non_stok);
         <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
-    <!-- Sesuai gambar: Button Utama menggunakan class "active" dan icon "fa-file-import" -->
     <button class="dropdown-btn active">
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
-     <div class="dropdown-container" style="display: block;">
+    <div class="dropdown-container" style="display: block;">
         <a href="../import/material.php">Import Material</a>
         <a href="../import/ba.php">Import BA</a>
         <a href="../import/form_stok.php">Import Stok</a>
@@ -248,7 +273,7 @@ $res_non_stok = mysqli_fetch_assoc($q_non_stok);
     <nav class="navbar navbar-custom">
         <div class="container-fluid px-0">
             <span class="navbar-brand mb-0 h1 d-flex align-items-center">
-                <i class="fa-solid fa-file-csv text-success me-2"></i> DATA IMPORT SYSTEM SINGLE-FILE
+                <i class="fa-solid fa-file-csv text-success me-2"></i> DATA IMPORT SYSTEM
             </span>
         </div>
     </nav>
@@ -262,18 +287,18 @@ $res_non_stok = mysqli_fetch_assoc($q_non_stok);
                             <i class="fa-solid fa-upload text-primary me-2"></i> Import CSV - Non Stok
                         </h5>
                         <span class="badge bg-info text-dark fw-bold px-3 py-2" style="border-radius: 8px;">
-                            Total Data: <?= number_format($res_non_stok['total_non_stok']); ?> Item
+                            Total Non Stok Database: <?= number_format($res_non_stok['total_non_stok'] ?? 0); ?> Item
                         </span>
                     </div>
 
                     <div class="alert alert-warning border-0 p-3 mb-4" style="border-radius: 12px; background-color: rgba(245, 158, 11, 0.08); color: #b45309;">
                         <i class="fa-solid fa-circle-info me-2"></i> 
-                        <strong>Format File:</strong> Form ini memproses file ekstensi <strong>.csv</strong>. Data Anda akan langsung diproses ke dalam database setelah tombol ditekan.
+                        <strong>Filter Kolom Keterangan:</strong> Sistem hanya menyimpan data yang pada kolom <strong>KETERANGAN</strong> memuat kata <strong>"NON STOK"</strong>.
                     </div>
 
                     <form action="" method="POST" enctype="multipart/form-data">
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-muted text-uppercase mb-2">Pilih File CSV Master Non Stok</label>
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-2">Pilih File CSV Master Database BA</label>
                             <div class="input-cyber-group">
                                 <input type="file" name="file_csv" class="form-control border-0 bg-transparent" accept=".csv" required>
                             </div>

@@ -1,9 +1,13 @@
 <?php
-session_start();
+// Pastikan session dimulai dengan benar
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if(!isset($_SESSION['login'])){
+// Pengecekan Login
+if(!isset($_SESSION['login']) && !isset($_SESSION['username'])){
     header("Location: ../login/index.php");
-    exit;
+    exit();
 }
 
 include "../config/koneksi.php";
@@ -14,85 +18,100 @@ $gagal_import  = false;
 
 // AKSI IMPORT DATA MATERIAL
 if(isset($_POST['import'])){
-    if($_FILES['file']['error'] == 0){
+    if(isset($_FILES['file']) && $_FILES['file']['error'] == 0){
         $file = $_FILES['file']['tmp_name'];
         $handle = fopen($file, "r");
 
         if ($handle !== FALSE) {
-            // Prepared statements database
-            $cek_stmt = $conn->prepare("SELECT id FROM material_gudang WHERE LOWER(nama_material) = LOWER(?) AND LOWER(lokasi_penyimpanan) = LOWER(?) LIMIT 1");
-            $stmt = $conn->prepare("INSERT INTO material_gudang 
-                (nama_material, satuan, jumlah, no_rak, kondisi, lokasi_penyimpanan, keterangan) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)");
+            // Prepared statement 1: Ke tabel material_gudang (Memperhitungkan NO_RAK agar rak berbeda tidak dianggap duplikat)
+            $cek_mat = $conn->prepare("SELECT id FROM material_gudang WHERE LOWER(nama_material) = LOWER(?) AND LOWER(lokasi_penyimpanan) = LOWER(?) AND LOWER(no_rak) = LOWER(?) LIMIT 1");
+            $stmt_mat = $conn->prepare("INSERT INTO material_gudang 
+                (nama_material, satuan, jumlah, no_rak, kondisi, lokasi_penyimpanan, keterangan, jenis_kategori) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+
+            // Prepared statement 2: Ke tabel ex_bongkaran (Langsung Insert Tanpa Cek Duplikat)
+            $stmt_ex = $conn->prepare("INSERT INTO ex_bongkaran 
+                (nama_material, satuan, jumlah, kondisi, lokasi_penyimpanan, keterangan_ex_bongkaran) 
+                VALUES (?, ?, ?, ?, ?, ?)");
 
             while(($data = fgetcsv($handle, 0, ",")) !== FALSE){
-                // Skip jika baris kosong total
+                // Skip baris kosong
                 if (empty($data) || !isset($data[0]) || trim($data[0]) === '') {
                     continue;
                 }
 
-                // Bersihkan spasi kosong di setiap ujung data kolom
+                // Bersihkan spasi kosong
                 foreach ($data as $key => $val) {
                     $data[$key] = trim($val);
                 }
 
-                // Lewati baris nama kolom / header tabel agar tidak masuk database
-                if (strtolower($data[0]) === 'storage location description' || strtolower($data[0]) === 'no') {
+                // Skip header tabel & judul laporan
+                $first_col = strtolower($data[0]);
+                $second_col = isset($data[1]) ? strtolower($data[1]) : '';
+                
+                if (
+                    $first_col === 'no' || 
+                    $second_col === 'nama material' || 
+                    strpos($first_col, 'pt pln') !== false || 
+                    strpos($first_col, 'daftar material') !== false
+                ) {
                     continue;
                 }
 
                 // =========================================================================
-                // PENENTUAN JALUR DATA BERDASARKAN HASIL COPIAN FILE CSV ASLI ANDA
+                // PEMBACAAN KOLOM SESUAI STRUKTUR EXCEL/CSV (Index 9 = Kolom J / Kategori)
                 // =========================================================================
-                if (isset($data[8]) && ($data[8] === 'Fast moving' || $data[8] === 'Slow moving' || $data[8] === 'Jenis Pergerakan')) {
-                    // JALUR 1: FILE material_stok(1).csv 
-                    $nama_material = isset($data[2]) ? $data[2] : '';
-                    $satuan        = isset($data[3]) ? $data[3] : '-';
-                    $raw_jumlah    = isset($data[4]) ? $data[4] : '0';
-                    $no_rak        = '-';
-                    $kondisi       = 'BAIK';
-                    $lokasi        = isset($data[0]) ? $data[0] : 'GUDANG UPT';
-                    $keterangan    = isset($data[5]) ? 'Kategori: ' . $data[5] : '';
-                } 
-                else {
-                    // JALUR 2: FILE material_nonstok.csv
-                    $nama_material = isset($data[1]) ? $data[1] : '';
-                    $satuan        = isset($data[2]) ? $data[2] : '-';
-                    $raw_jumlah    = isset($data[3]) ? $data[3] : '0';
-                    $no_rak        = isset($data[4]) ? $data[4] : '-';
-                    $kondisi       = isset($data[5]) ? $data[5] : '-';
-                    $lokasi        = isset($data[6]) ? $data[6] : '-';
-                    $keterangan    = isset($data[7]) ? $data[7] : '';
+                $nama_material = isset($data[1]) ? trim($data[1], '"') : '';
+                $satuan        = isset($data[2]) && $data[2] !== '' ? $data[2] : '-';
+                $raw_jumlah    = isset($data[3]) ? $data[3] : '0';
+                $no_rak        = isset($data[4]) && $data[4] !== '' ? $data[4] : '-';
+                $kondisi       = isset($data[5]) && $data[5] !== '' ? $data[5] : 'BAIK';
+                $lokasi        = isset($data[6]) && $data[6] !== '' ? $data[6] : '-';
+                $keterangan    = isset($data[7]) ? $data[7] : '';
+                
+                // Ambil Kategori dari Kolom J ($data[9]) secara dinamis
+                if (isset($data[9]) && trim($data[9]) !== '') {
+                    $kategori = trim($data[9]);
+                } else {
+                    $kategori = 'Non Stok'; 
                 }
 
                 if (empty($nama_material)) {
                     continue;
                 }
 
-                // Bersihkan sisa tanda petik dua pembungkus string bawaan CSV
-                $nama_material = trim($nama_material, '"');
-
-                // Ubah format angka pecahan desimal Excel (misal: 4.0) menjadi Integer bulat (4)
                 $jumlah = (int)round((float)$raw_jumlah);
 
-                // Saringan anti-duplikat berdasarkan Nama Material & Lokasi
-                $cek_stmt->bind_param("ss", $nama_material, $lokasi);
-                $cek_stmt->execute();
-                $cek_stmt->store_result();
-                if($cek_stmt->num_rows > 0){
-                    continue; // Lewati kalau data sudah pernah masuk
-                }
+                // =========================================================================
+                // PERCABANGAN SIMPAN: EX BONGKARAN vs MATERIAL GUDANG
+                // =========================================================================
+                if (strcasecmp($kategori, 'Ex Bongkaran') === 0 || strcasecmp($kategori, 'Eks Bongkaran') === 0) {
+                    // LANGSUNG SIMPAN SEMUA DATA EX BONGKARAN (TANPA ANTI-DUPLIKAT)
+                    $stmt_ex->bind_param("ssisss", $nama_material, $satuan, $jumlah, $kondisi, $lokasi, $keterangan);
+                    if($stmt_ex->execute()){
+                        $jumlah_import++;
+                    }
+                } else {
+                    // Cek duplikat di tabel material_gudang (Memperhitungkan Nama, Lokasi, dan Rak)
+                    $cek_mat->bind_param("sss", $nama_material, $lokasi, $no_rak);
+                    $cek_mat->execute();
+                    $cek_mat->store_result();
+                    if($cek_mat->num_rows > 0){
+                        continue;
+                    }
 
-                // Eksekusi Simpan murni ke MySQL
-                $stmt->bind_param("ssissss", $nama_material, $satuan, $jumlah, $no_rak, $kondisi, $lokasi, $keterangan);
-                if($stmt->execute()){
-                    $jumlah_import++;
+                    // Simpan KE material_gudang untuk kategori lainnya
+                    $stmt_mat->bind_param("ssisssss", $nama_material, $satuan, $jumlah, $no_rak, $kondisi, $lokasi, $keterangan, $kategori);
+                    if($stmt_mat->execute()){
+                        $jumlah_import++;
+                    }
                 }
             }
 
             fclose($handle);
-            $cek_stmt->close();
-            $stmt->close();
+            $cek_mat->close();
+            $stmt_mat->close();
+            $stmt_ex->close();
             $sukses_import = true;
         } else {
             $gagal_import = true;
@@ -124,25 +143,15 @@ if(isset($_POST['import'])){
             --bg-sidebar: #d0e1f9;
         }
 
-        * {
-            margin: 0; padding: 0; box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        body { 
-            background: var(--bg-base); color: var(--text-main);
-            min-height: 100vh; overflow-x: hidden;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
             background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15);
-            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column;
+            padding: 35px 20px; z-index: 1050; display: flex; flex-direction: column; overflow-y: auto;
         }
-        .sidebar h3 { 
-            font-size: 1.25rem; font-weight: 800; color: #1e3a8a; 
-            margin-bottom: 35px; padding-left: 6px; display: flex; align-items: center; gap: 10px;
-        }
+        .sidebar h3 { font-size: 1.25rem; font-weight: 800; color: #1e3a8a; margin-bottom: 35px; padding-left: 6px; display: flex; align-items: center; gap: 10px; }
         
         .sidebar a, .dropdown-btn { 
             display: flex; align-items: center; justify-content: space-between; 
@@ -152,10 +161,7 @@ if(isset($_POST['import'])){
             transition: all 0.2s ease-in-out;
         }
         
-        .sidebar a:hover, .dropdown-btn:hover { 
-            color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px);
-        }
-        
+        .sidebar a:hover, .dropdown-btn:hover { color: #025a9c; background: rgba(2, 132, 199, 0.12); transform: translateX(4px); }
         .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
         .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
         
@@ -171,14 +177,10 @@ if(isset($_POST['import'])){
         .dropdown-btn.active i.menu-icon { color: #ffffff !important; }
         
         .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
-        .dropdown-container a { 
-            padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
-        }
+        .dropdown-container a { padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3); border-radius: 8px; margin-bottom: 3px; }
         .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
 
-        .sidebar .logout-button { 
-            margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; 
-        }
+        .sidebar .logout-button { margin-top: auto; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; }
         .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
         .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
 
@@ -197,20 +199,14 @@ if(isset($_POST['import'])){
             border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 16px;
             box-shadow: 0 10px 25px -10px rgba(148, 163, 184, 0.1); height: 100%;
         }
-        .mini-card-icon {
-            width: 48px; height: 48px; border-radius: 14px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
-        }
+        .mini-card-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
 
         .cyber-import-container {
             background: var(--bg-card); border: 1px solid var(--border-glass);
             border-radius: 24px; padding: 40px; box-shadow: 0 25px 50px -12px rgba(148, 163, 184, 0.2);
         }
 
-        .cyber-alert-info {
-            background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.12);
-            border-radius: 16px; padding: 20px;
-        }
+        .cyber-alert-info { background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.12); border-radius: 16px; padding: 20px; }
 
         .upload-drag-zone {
             border: 2px dashed rgba(2, 132, 199, 0.25); background: rgba(255, 255, 255, 0.4);
@@ -237,9 +233,7 @@ if(isset($_POST['import'])){
             background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #fff; font-weight: 700;
             padding: 14px 32px; border-radius: 12px; box-shadow: 0 6px 20px rgba(2, 132, 199, 0.25); transition: all 0.25s;
         }
-        .btn-action-submit:hover {
-            transform: translateY(-2px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4); color: #fff;
-        }
+        .btn-action-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4); color: #fff; }
         .btn-back-custom {
             border-radius: 12px; padding: 14px 28px; font-weight: 600;
             background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-muted);
@@ -252,17 +246,11 @@ if(isset($_POST['import'])){
 <div class="sidebar">
     <h3><i class="fa-solid fa-bolt text-primary"></i> I-CALM Panel</h3>
     <a href="../dashboard/index.php">
-        <span class="menu-content-wrapper">
-            <i class="fa-solid fa-chart-pie"></i>
-            <span>Dashboard</span>
-        </span>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></span>
     </a>
     
     <button class="dropdown-btn">
-        <span class="menu-content-wrapper">
-            <i class="fa-solid fa-layer-group menu-icon"></i>
-            <span>Monitoring</span>
-        </span>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-layer-group menu-icon"></i><span>Monitoring</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
@@ -271,10 +259,7 @@ if(isset($_POST['import'])){
     </div>
 
     <button class="dropdown-btn">
-        <span class="menu-content-wrapper">
-            <i class="fa-solid fa-tags menu-icon"></i>
-            <span>Kategori</span>
-        </span>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-tags menu-icon"></i><span>Kategori</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container">
@@ -288,41 +273,16 @@ if(isset($_POST['import'])){
     </div>
 
     <button class="dropdown-btn active">
-        <span class="menu-content-wrapper">
-            <i class="fa-solid fa-file-import menu-icon"></i>
-            <span>Import</span>
-        </span>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
     <div class="dropdown-container" style="display: block;">
         <a href="material.php" class="active-menu">Import Material</a>
         <a href="ba.php">Import BA</a>
-        <a href="../import/form_stok.php">Import Stok</a>
-        <a href="../import/form_non_stok.php">Import Non Stok</a>
-        <a href="../import/form_non_po.php">Import Non PO</a>
-        <a href="../import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="../import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="../import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="../import/form_pemakaian.php">Import Pemakaian</a>
-    </div>
-
-    <button class="dropdown-btn">
-        <span class="menu-content-wrapper">
-            <i class="fa-solid fa-file-export menu-icon"></i>
-            <span>Export</span>
-        </span>
-        <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
-    </button>
-    <div class="dropdown-container">
-        <a href="../export/material_excel.php">Export Material</a>
-        <a href="../export/ba_excel.php">Export BA</a>
     </div>
 
     <a href="../login/logout.php" class="logout-button">
-        <span class="menu-content-wrapper">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            <span>Logout</span>
-        </span>
+        <span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span>
     </a>
 </div>
 
@@ -342,7 +302,8 @@ if(isset($_POST['import'])){
             <div class="col-xl-9 col-lg-10">
                 
                 <?php
-                $total = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS total FROM material_gudang"));
+                $total_query = mysqli_query($conn,"SELECT COUNT(*) AS total FROM material_gudang");
+                $total = $total_query ? mysqli_fetch_assoc($total_query) : ['total' => 0];
                 ?>
 
                 <div class="row g-4 mb-4">
@@ -373,26 +334,25 @@ if(isset($_POST['import'])){
                 <div class="cyber-import-container">
                     <div class="text-center mb-4">
                         <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-file-csv text-primary me-2"></i>Smart Import Data Material</h4>
-                        <p class="text-muted small">Sistem mendeteksi struktur kolom secara otomatis. Mendukung file berkas tipe <b>Material Stok</b> & <b>Non-Stok</b>.</p>
+                        <p class="text-muted small">Sistem memisahkan <b>Ex Bongkaran</b> langsung ke tabel ex_bongkaran, sisanya ke Material Gudang.</p>
                     </div>
 
                     <div class="cyber-alert-info mb-4">
                         <div class="d-flex gap-2 align-items-center mb-2">
                             <i class="fa-solid fa-circle-info text-primary"></i>
-                            <strong style="font-size: 0.85rem; letter-spacing: 0.3px; color: #0369a1;">PETUNJUK PARSING & INTEGRASI BERKAS:</strong>
+                            <strong style="font-size: 0.85rem; letter-spacing: 0.3px; color: #0369a1;">PETUNJUK PENTING:</strong>
                         </div>
                         <ul class="mb-0 small text-secondary" style="padding-left: 20px; line-height: 1.6; font-weight: 500;">
-                            <li>Pastikan ekstensi arsip yang dipilih murni bertipe data <strong>.CSV (Comma Separated Values)</strong>.</li>
-                            <li>Sistem otomatis melewati baris <span class="text-dark fw-semibold">Header Kolom / Nama Kolom</span> agar tidak masuk ke database.</li>
-                            <li><strong>Saringan Anti-Duplikat:</strong> Data dicocokkan otomatis berdasarkan Nama Material & Lokasi Penyimpanan sebelum diproses masuk.</li>
+                            <li>Simpan file Excel Anda sebagai format <strong>.CSV (Comma Separated Values)</strong>.</li>
+                            <li>Seluruh data <strong>Ex Bongkaran</strong> otomatis masuk 100% ke tabel Ex Bongkaran.</li>
                         </ul>
                     </div>
 
-                    <form method="POST" enctype="multipart/form-data">
+                    <form action="material.php" method="POST" enctype="multipart/form-data">
                         <div class="upload-drag-zone mb-4">
                             <i class="fa-solid fa-square-poll-horizontal fa-3x text-primary mb-3 opacity-75"></i>
-                            <h5 class="fw-bold text-dark mb-1">Pilih Berkas Laporan CSV</h5>
-                            <p class="text-muted small mb-0">Klik area atau tombol di bawah ini untuk memuat dokumen dari perangkat lokal</p>
+                            <h5 class="fw-bold text-dark mb-1">Pilih Berkas CSV</h5>
+                            <p class="text-muted small mb-0">Klik area di bawah untuk memuat dokumen CSV dari perangkat Anda</p>
                             
                             <input type="file" name="file" class="form-control file-input-cyber" accept=".csv" required>
                         </div>
@@ -421,12 +381,14 @@ if(isset($_POST['import'])){
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const container = this.nextElementSibling;
-            this.classList.toggle('active');
+            const isOpen = container.style.display === "block";
             
-            if (window.getComputedStyle(container).display === "block") {
+            if (isOpen) {
                 container.style.display = "none";
+                this.classList.remove('active');
             } else {
                 container.style.display = "block";
+                this.classList.add('active');
             }
         });
     });
@@ -434,26 +396,19 @@ if(isset($_POST['import'])){
     <?php if($sukses_import): ?>
         Swal.fire({
             title: 'Import Sukses Sempurna!',
-            text: 'Sebanyak <?= $jumlah_import; ?> data material berhasil disimpan!',
+            text: 'Sebanyak <?= $jumlah_import; ?> data material berhasil disimpan ke tujuan kategorinya masing-masing!',
             icon: 'success',
-            background: '#ffffff',
-            color: '#1e293b',
             confirmButtonColor: '#0284c7',
-            confirmButtonText: 'Buka Material Gudang'
-        }).then(() => { 
-            window.location = '../material/index.php'; 
-        });
+            confirmButtonText: 'Selesai'
+        }).then(() => { window.location = '../material/index.php'; });
     <?php endif; ?>
 
     <?php if($gagal_import): ?>
         Swal.fire({ 
             title: 'Gagal Import!', 
-            text: 'Periksa kembali format file CSV Anda atau koneksi database.', 
+            text: 'Periksa kembali format file CSV Anda.', 
             icon: 'error', 
-            background: '#ffffff',
-            color: '#1e293b',
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Coba Lagi'
+            confirmButtonColor: '#ef4444'
         });
     <?php endif; ?>
 </script>

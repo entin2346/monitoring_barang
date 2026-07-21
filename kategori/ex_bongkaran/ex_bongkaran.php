@@ -6,43 +6,32 @@ if(!isset($_SESSION['login'])){
 }
 include "../../config/koneksi.php";
 
-// Ambil parameter pencarian
 $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
+// Filter Pencarian
 $whereClause = "1=1";
-
-if ($cari_clean != '') {
-    $whereClause .= " AND nama_material LIKE '%$cari_clean%'";
+if ($cari_clean !== '') {
+    $whereClause .= " AND (nama_material LIKE '%$cari_clean%' OR lokasi_penyimpanan LIKE '%$cari_clean%' OR peminjam LIKE '%$cari_clean%')";
 }
 
-// Pagination
+// Mutasi Halaman (Pagination)
 $limit = 25;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-
-if($page < 1){
-    $page = 1;
-}
-
+$page = max(1, (int)($_GET['page'] ?? 1));
 $offset = ($page - 1) * $limit;
 
-// Total Data
-$total_query = mysqli_query($conn,"SELECT COUNT(*) AS total FROM ex_bongkaran WHERE $whereClause");
-$total_data = mysqli_fetch_assoc($total_query)['total'];
+// Total Data & Total Stok dari tabel ex_bongkaran
+$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM ex_bongkaran WHERE $whereClause");
+$total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
 $total_halaman = ceil($total_data / $limit);
 
-// Total Stok
-$stok_query = mysqli_query($conn,"SELECT SUM(jumlah) AS total FROM ex_bongkaran WHERE $whereClause");
+$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM ex_bongkaran WHERE $whereClause");
 $total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
-// Ambil Data
-$query = mysqli_query($conn,"
-SELECT *
-FROM ex_bongkaran
-WHERE $whereClause
-ORDER BY nama_material ASC
-LIMIT $offset,$limit
-");
+// =========================================================================
+// 📌 DI SINI KODE TERSEBUT DITAMBAHKAN / DIGUNAKAN:
+// =========================================================================
+$query = mysqli_query($conn, "SELECT * FROM ex_bongkaran WHERE $whereClause ORDER BY id DESC LIMIT $offset, $limit");
 
 if(!$query){
     die("Query Gagal: " . mysqli_error($conn));
@@ -70,8 +59,13 @@ if(!$query){
             --bg-sidebar: #d0e1f9; 
         }
 
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: auto; }
 
         .sidebar {
             position: fixed; left: 0; top: 0; width: 260px; height: 100%;
@@ -139,6 +133,13 @@ if(!$query){
         .table-cyber tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border-color); }
         .table-cyber tbody tr:hover td { background: #f8fafc; }
         .table-cyber tbody td { padding: 15px 22px; font-size: 0.88rem; vertical-align: middle; color: var(--text-main) !important; }
+
+        @media (max-width: 991.98px) {
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid rgba(2, 132, 199, 0.15); padding: 20px; }
+            .content { margin-left: 0; width: 100%; }
+            .main-body-wrapper { padding: 20px; }
+            .navbar-custom { padding: 20px; }
+        }
     </style>
 </head>
 <body>
@@ -180,13 +181,6 @@ if(!$query){
     <div class="dropdown-container">
         <a href="/monitoring_barang/import/material.php">Import Material</a>
         <a href="/monitoring_barang/import/ba.php">Import BA</a>
-        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
-        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
-        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
-        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -235,17 +229,15 @@ if(!$query){
                     <span class="input-group-text bg-white border-end-0 px-3" style="border-radius: 12px 0 0 12px; border-color: #cbd5e1; height: 46px; color: #64748b;">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </span>
-                    <input type="text" name="cari" class="form-control border-start-0 ps-1 pr-3" autocomplete="off" placeholder="Cari material..." value="<?= htmlspecialchars($cari_clean); ?>" style="border-radius: 0 12px 12px 0; border-color: #cbd5e1; height: 46px; background-color: #fff;">
+                    <input type="text" name="cari" class="form-control border-start-0 ps-1 pr-3" autocomplete="off" placeholder="Cari material ex bongkaran..." value="<?= htmlspecialchars($cari_clean); ?>" style="border-radius: 0 12px 12px 0; border-color: #cbd5e1; height: 46px; background-color: #fff;">
                 </div>
                 <button type="submit" class="btn btn-primary px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #0284c7; border: none; height: 46px; white-space: nowrap;">
                     <i class="fa-solid fa-sliders"></i> Saring
                 </button>
             </form>
-            <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
-                <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
-                    <i class="fa-solid fa-plus"></i> Tambah
-                </a>
-            <?php } ?>
+            <a href="../../material/tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius:12px;background-color:#059669;border:none;height:46px;white-space:nowrap;">
+                <i class="fa-solid fa-plus"></i> Tambah
+            </a>
         </div>
 
         <div class="cyber-table-wrapper mb-4">
@@ -260,7 +252,7 @@ if(!$query){
                         <th>MERK/TIPE</th>
                         <th>NO SERI</th>
                         <th>GARDU INDUK</th>
-                        <th>LOKASI ASAL EKS. BONGKARAN (GARDU INDUK)</th>
+                        <th>LOKASI ASAL EKS. BONGKARAN</th>
                         <th>NO. KONTRAK PENGGANTIAN</th>
                         <th>JUDUL KONTRAK PENGGANTIAN</th>
                         <th>JUMLAH</th>
@@ -272,7 +264,7 @@ if(!$query){
                         <th>JUSTIFIKASI KONDISI</th>
                         <th>KELENGKAPAN AKSESORIS</th>
                         <th>KETERANGAN KELENGKAPAN AKSESORIS</th>
-                        <th>KETERANGAN EX BONGKARAN (PENGGANTIAN/UPRATING)</th>
+                        <th>KETERANGAN EX BONGKARAN</th>
                         <th>STATUS</th>
                         <th>KETERANGAN WAKTU PEMBONGKARAN</th>
                         <th>TANGGAL UPDATE TERAKHIR</th>
@@ -343,7 +335,7 @@ if(!$query){
                         <td>
                             <?php if (!empty($d['foto_nameplate']) && $d['foto_nameplate'] !== '-'): ?>
                                 <a href="<?= htmlspecialchars($d['foto_nameplate']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-                                    <i class="fa-solid fa-link me-1"></i> Foto Nameplate
+                                    <i class="fa-solid fa-link me-1"></i> Nameplate
                                 </a>
                             <?php else: ?>
                                 -
@@ -354,7 +346,7 @@ if(!$query){
                         <td>
                             <?php if (!empty($d['foto_material']) && $d['foto_material'] !== '-'): ?>
                                 <a href="<?= htmlspecialchars($d['foto_material']); ?>" target="_blank" class="btn btn-outline-success btn-sm px-2 py-1" style="border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-                                    <i class="fa-solid fa-link me-1"></i> Foto Material
+                                    <i class="fa-solid fa-link me-1"></i> Material
                                 </a>
                             <?php else: ?>
                                 -
@@ -412,26 +404,19 @@ if(!$query){
                         <td><?= htmlspecialchars($d['keterangan_tambahan'] ?? '-'); ?></td>
                         <td class="text-center">
                             <div class="d-flex gap-1 justify-content-center">
-                                <!-- Semua user boleh melihat detail -->
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail">
-                                    <i class="fa-solid fa-eye"></i>
+                                <a href="../../material/edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit">
+                                    <i class="fa-solid fa-pen"></i>
                                 </a>
-
-                                <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
-                                    <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </a>
-                                    <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </a>
-                                <?php } ?>
+                                <a href="../../material/hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>
                         <td colspan="43" class="text-center py-5" style="color: var(--text-muted) !important;">
-                            <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data kosong atau tidak ditemukan.
+                            <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data Ex Bongkaran tidak ditemukan.
                         </td>
                     </tr>
                     <?php } ?>

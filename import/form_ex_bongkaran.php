@@ -9,7 +9,7 @@ if(!isset($_SESSION['login'])){
 
 include "../config/koneksi.php";
 
-// 2. PROSES BACKEND CSV EX BONGKARAN (Tanpa Vendor / Autoload)
+// 2. PROSES BACKEND CSV EX BONGKARAN
 if (isset($_POST['submit_import'])) {
     if (isset($_FILES['file_csv']) && $_FILES['file_csv']['error'] == 0) {
         
@@ -19,7 +19,6 @@ if (isset($_POST['submit_import'])) {
             
             $sukses_insert = 0;
             $gagal_insert = 0;
-            $index = 0;
             $error_logs = []; 
             
             // Otomatis mendeteksi pemisah koma (,) atau titik koma (;)
@@ -29,15 +28,16 @@ if (isset($_POST['submit_import'])) {
             
             while (($row = fgetcsv($handle, 10000, $separator)) !== FALSE) {
                 
-                // Lewati baris pertama jika merupakan Header/Judul Kolom CSV
-                if ($index == 0) {
-                    $index++;
+                // Ambil Nama Material
+                $nama_material = mysqli_real_escape_string($conn, trim($row[2] ?? ''));  
+                $unit          = mysqli_real_escape_string($conn, trim($row[1] ?? ''));
+
+                // BYPASS / FILTER BARIS NON-DATA:
+                if (empty($nama_material) || strtolower($nama_material) == 'nama material' || strlen($nama_material) < 2) {
                     continue;
                 }
                 
-                // PEMETAAN KOLOM CSV (Nilai $row[1] tetap dibaca dari file agar urutan indeks ke bawah tidak bergeser)
-                $unit                       = mysqli_real_escape_string($conn, $row[1] ?? '');  
-                $nama_material              = mysqli_real_escape_string($conn, $row[2] ?? '');  
+                // PEMETAAN KOLOM CSV PER BARIS DATA MATERIAL
                 $mtu                        = mysqli_real_escape_string($conn, $row[3] ?? '');  
                 $tegangan                   = mysqli_real_escape_string($conn, $row[4] ?? '');  
                 $merk_tipe                  = mysqli_real_escape_string($conn, $row[5] ?? '');  
@@ -46,9 +46,16 @@ if (isset($_POST['submit_import'])) {
                 $lokasi_asal_eks_bongkaran  = mysqli_real_escape_string($conn, $row[8] ?? '');  
                 $no_kontrak_penggantian     = mysqli_real_escape_string($conn, $row[9] ?? '');  
                 $judul_kontrak_penggantian  = mysqli_real_escape_string($conn, $row[10] ?? ''); 
-                $jumlah                     = mysqli_real_escape_string($conn, $row[11] ?? '0');  
+                
+                // Bersihkan format angka (Jumlah, Nilai Buku, Nilai Perolehan)
+                $jumlah_raw                 = preg_replace('/[^0-9.]/', '', $row[11] ?? '0');
+                $jumlah                     = is_numeric($jumlah_raw) ? $jumlah_raw : '0';
+                
                 $satuan                     = mysqli_real_escape_string($conn, $row[12] ?? ''); 
-                $nilai_buku                 = mysqli_real_escape_string($conn, $row[13] ?? '0');  
+                
+                $nilai_buku_raw             = preg_replace('/[^0-9.]/', '', $row[13] ?? '0');
+                $nilai_buku                 = is_numeric($nilai_buku_raw) ? $nilai_buku_raw : '0';  
+                
                 $berat                      = mysqli_real_escape_string($conn, $row[14] ?? ''); 
                 $lokasi_penyimpanan         = mysqli_real_escape_string($conn, $row[15] ?? ''); 
                 $kondisi                    = mysqli_real_escape_string($conn, $row[16] ?? ''); 
@@ -60,7 +67,10 @@ if (isset($_POST['submit_import'])) {
                 $ket_waktu_pembongkaran     = mysqli_real_escape_string($conn, $row[22] ?? ''); 
                 $tanggal_update_terakhir    = mysqli_real_escape_string($conn, $row[23] ?? ''); 
                 $no_at                      = mysqli_real_escape_string($conn, $row[24] ?? ''); 
-                $nilai_perolehan            = mysqli_real_escape_string($conn, $row[25] ?? '0');  
+                
+                $nilai_perolehan_raw        = preg_replace('/[^0-9.]/', '', $row[25] ?? '0');
+                $nilai_perolehan            = is_numeric($nilai_perolehan_raw) ? $nilai_perolehan_raw : '0';  
+                
                 $techidentno                = mysqli_real_escape_string($conn, $row[26] ?? ''); 
                 $upt                        = mysqli_real_escape_string($conn, $row[27] ?? ''); 
                 $umur_operasi               = mysqli_real_escape_string($conn, $row[28] ?? ''); 
@@ -78,138 +88,68 @@ if (isset($_POST['submit_import'])) {
                 $keterangan                 = mysqli_real_escape_string($conn, $row[40] ?? ''); 
                 $keterangan_tambahan        = mysqli_real_escape_string($conn, $row[41] ?? ''); 
                 
-                $jenis_kategori             = 'ex_bongkaran'; 
-
-                if (empty(trim($nama_material))) {
-                    continue;
-                }
-                
-                // ==========================
-                // 1. SIMPAN KE TABEL ex_bongkaran
-                // ==========================
+                // SIMPAN KE TABEL ex_bongkaran
                 $query_ex = "INSERT INTO ex_bongkaran
                 (
-                unit,
-                nama_material,
-                mtu,
-                tegangan,
-                merk_tipe,
-                no_seri,
-                gardu_induk,
-                lokasi_asal_eks_bongkaran,
-                no_kontrak_penggantian,
-                judul_kontrak_penggantian,
-                jumlah,
-                satuan,
-                nilai_buku,
-                berat,
-                lokasi_penyimpanan,
-                kondisi,
-                justifikasi_kondisi,
-                kelengkapan_aksesoris,
-                ket_kelengkapan_aksesoris,
-                keterangan_ex_bongkaran,
-                status,
-                ket_waktu_pembongkaran,
-                tanggal_update_terakhir,
-                no_at,
-                nilai_perolehan,
-                techidentno,
-                upt,
-                umur_operasi,
-                umur_simpan,
-                tahun_pembuatan,
-                funloct,
-                katalog_mara,
-                no_aset,
-                foto_nameplate,
-                foto_material,
-                link_ba_pemindahan,
-                link_ba_pemanfaatan,
-                link_hasil_uji,
-                link_ba_penggantian_mtu,
-                keterangan,
-                keterangan_tambahan
+                    unit, nama_material, mtu, tegangan, merk_tipe, no_seri, gardu_induk,
+                    lokasi_asal_eks_bongkaran, no_kontrak_penggantian, judul_kontrak_penggantian,
+                    jumlah, satuan, nilai_buku, berat, lokasi_penyimpanan, kondisi,
+                    justifikasi_kondisi, kelengkapan_aksesoris, ket_kelengkapan_aksesoris,
+                    keterangan_ex_bongkaran, status, ket_waktu_pembongkaran, tanggal_update_terakhir,
+                    no_at, nilai_perolehan, techidentno, upt, umur_operasi, umur_simpan,
+                    tahun_pembuatan, funloct, katalog_mara, no_aset, foto_nameplate, foto_material,
+                    link_ba_pemindahan, link_ba_pemanfaatan, link_hasil_uji, link_ba_penggantian_mtu,
+                    keterangan, keterangan_tambahan
                 )
                 VALUES
                 (
-                '$unit',
-                '$nama_material',
-                '$mtu',
-                '$tegangan',
-                '$merk_tipe',
-                '$no_seri',
-                '$gardu_induk',
-                '$lokasi_asal_eks_bongkaran',
-                '$no_kontrak_penggantian',
-                '$judul_kontrak_penggantian',
-                '$jumlah',
-                '$satuan',
-                '$nilai_buku',
-                '$berat',
-                '$lokasi_penyimpanan',
-                '$kondisi',
-                '$justifikasi_kondisi',
-                '$kelengkapan_aksesoris',
-                '$ket_kelengkapan_aksesoris',
-                '$keterangan_ex_bongkaran',
-                '$status',
-                '$ket_waktu_pembongkaran',
-                '$tanggal_update_terakhir',
-                '$no_at',
-                '$nilai_perolehan',
-                '$techidentno',
-                '$upt',
-                '$umur_operasi',
-                '$umur_simpan',
-                '$tahun_pembuatan',
-                '$funloct',
-                '$katalog_mara',
-                '$no_aset',
-                '$foto_nameplate',
-                '$foto_material',
-                '$link_ba_pemindahan',
-                '$link_ba_pemanfaatan',
-                '$link_hasil_uji',
-                '$link_ba_penggantian_mtu',
-                '$keterangan',
-                '$keterangan_tambahan'
+                    '$unit', '$nama_material', '$mtu', '$tegangan', '$merk_tipe', '$no_seri', '$gardu_induk',
+                    '$lokasi_asal_eks_bongkaran', '$no_kontrak_penggantian', '$judul_kontrak_penggantian',
+                    '$jumlah', '$satuan', '$nilai_buku', '$berat', '$lokasi_penyimpanan', '$kondisi',
+                    '$justifikasi_kondisi', '$kelengkapan_aksesoris', '$ket_kelengkapan_aksesoris',
+                    '$keterangan_ex_bongkaran', '$status', '$ket_waktu_pembongkaran', '$tanggal_update_terakhir',
+                    '$no_at', '$nilai_perolehan', '$techidentno', '$upt', '$umur_operasi', '$umur_simpan',
+                    '$tahun_pembuatan', '$funloct', '$katalog_mara', '$no_aset', '$foto_nameplate', '$foto_material',
+                    '$link_ba_pemindahan', '$link_ba_pemanfaatan', '$link_hasil_uji', '$link_ba_penggantian_mtu',
+                    '$keterangan', '$keterangan_tambahan'
                 )";
 
                 if (mysqli_query($conn, $query_ex)) {
+                    
+                    // SINKRONISASI KE TABEL material_gudang
+                    $cek = mysqli_query($conn, "SELECT id FROM material_gudang WHERE nama_material='$nama_material' AND jenis_kategori='Ex Bongkaran' LIMIT 1");
+                    if (mysqli_num_rows($cek) == 0) {
+                        mysqli_query($conn, "INSERT INTO material_gudang 
+                            (nama_material, satuan, jumlah, kondisi, lokasi_penyimpanan, keterangan, dokumentasi, sumber_barang, jenis_kategori) 
+                            VALUES 
+                            ('$nama_material', '$satuan', '$jumlah', '$kondisi', '$lokasi_penyimpanan', '$keterangan', '$foto_material', 'Ex Bongkaran', 'Ex Bongkaran')");
+                    }
+                    
                     $sukses_insert++;
                 } else {
                     $gagal_insert++;
-                    $error_logs[] = "Baris ".($index+1)." : " . mysqli_error($conn);
+                    $error_logs[] = "Gagal simpan ($nama_material): " . mysqli_error($conn);
                 }
-
-                // ====================================================
-                // 2. BAGIAN SIMPAN KE material_gudang SUDAH DIHAPUS
-                // ====================================================
-
-                $index++;
             }
             fclose($handle);
             
-            // Redirect telah disesuaikan ke folder /ex_bongkaran/ex_bongkaran.php
-            if ($gagal_insert > 0) {
-                $detail_error = mysqli_real_escape_string($conn, $error_logs[0]);
-                echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Ex Bongkaran! Gagal: $gagal_insert.\\nDetail Error: $detail_error'); window.location='../kategori/ex_bongkaran/ex_bongkaran.php';</script>";
+            if ($sukses_insert > 0) {
+                echo "<script>alert('Berhasil mengimport $sukses_insert data CSV Ex Bongkaran! (Gagal: $gagal_insert)'); window.location='../kategori/ex_bongkaran/ex_bongkaran.php';</script>";
             } else {
-                echo "<script>alert('Berhasil mengimport seluruh data ($sukses_insert) CSV Ex Bongkaran!'); window.location='../kategori/ex_bongkaran/ex_bongkaran.php';</script>";
+                $detail_error = isset($error_logs[0]) ? mysqli_real_escape_string($conn, $error_logs[0]) : 'Tidak ada baris data valid yang terdeteksi.';
+                echo "<script>alert('Gagal mengimport data! Detail: $detail_error'); window.location='../kategori/ex_bongkaran/ex_bongkaran.php';</script>";
             }
             exit;
         } else {
             echo "<script>alert('Gagal membuka file CSV.');</script>";
         }
     } else {
-        echo "<script>alert('Terjadi kesalahan upload file.');
-        window.location='../kategori/ex_bongkaran/ex_bongkaran.php';</script>";
+        echo "<script>alert('Terjadi kesalahan upload file.'); window.location='../kategori/ex_bongkaran/ex_bongkaran.php';</script>";
     }
 }
 
-// 3. AMBIL STATISTIK UNTUK INFORMASI HALAMAN
-$q_ex = mysqli_query($conn, "SELECT COUNT(*) as total_ex FROM material_gudang WHERE jenis_kategori = 'ex_bongkaran'");
+// 3. STATISTIK HALAMAN (Memperbaiki error $res_ex yang hilang)
+$q_ex = mysqli_query($conn, "SELECT COUNT(*) as total_ex FROM ex_bongkaran");
 $res_ex = mysqli_fetch_assoc($q_ex);
 ?>
 <!DOCTYPE html>
@@ -235,7 +175,7 @@ $res_ex = mysqli_fetch_assoc($q_ex);
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
         
-        /* SIDEBAR STYLING - DISESUAIKAN TOTAL DENGAN BA.PHP */
+        /* SIDEBAR STYLING */
         .sidebar { 
             position: fixed; left: 0; top: 0; width: 260px; height: 100%; 
             background-color: var(--bg-sidebar); border-right: 1px solid rgba(2, 132, 199, 0.15); 
@@ -273,7 +213,7 @@ $res_ex = mysqli_fetch_assoc($q_ex);
         
         .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
         .dropdown-container a { 
-            padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3);
+            padding: 9px 14px; font-size: 0.85rem; color: #1e40af; font-weight: 600; background: rgba(255, 255, 255, 0.3); border-radius: 8px; margin-bottom: 5px; text-decoration: none; display: block;
         }
         .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
 
@@ -322,7 +262,6 @@ $res_ex = mysqli_fetch_assoc($q_ex);
         <a href="../kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
-    <!-- Gunakan icon fa-file-import & state active pada button Import -->
     <button class="dropdown-btn active">
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
@@ -368,7 +307,7 @@ $res_ex = mysqli_fetch_assoc($q_ex);
                             <i class="fa-solid fa-upload text-primary me-2"></i> Import CSV - Ex Bongkaran Final
                         </h5>
                         <span class="badge bg-info text-dark fw-bold px-3 py-2" style="border-radius: 8px;">
-                            Total Data: <?= number_format($res_ex['total_ex']); ?> Item
+                            Total Data: <?= number_format($res_ex['total_ex'] ?? 0); ?> Item
                         </span>
                     </div>
 

@@ -1,7 +1,7 @@
 <?php
 session_start();
 if(!isset($_SESSION['login'])){
-    header("Location: ../login/index.php");
+    header("Location: ../../login/index.php");
     exit;
 }
 include "../../config/koneksi.php";
@@ -27,35 +27,23 @@ if($page < 1){
 
 $offset = ($page - 1) * $limit;
 
-$total_query = mysqli_query($conn,"
-SELECT COUNT(*) AS total
-FROM peminjaman
-WHERE $whereClause
-");
-
-$total_data = mysqli_fetch_assoc($total_query)['total'];
-
+// Total Data
+$total_query = mysqli_query($conn,"SELECT COUNT(*) AS total FROM peminjaman WHERE $whereClause");
+$total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
 $total_halaman = ceil($total_data/$limit);
 
-$stok_query = mysqli_query($conn,"
-SELECT SUM(jumlah) AS total
-FROM peminjaman
-WHERE $whereClause
-");
+// Total Stok Peminjaman
+$stok_query = mysqli_query($conn,"SELECT SUM(jumlah) AS total FROM peminjaman WHERE $whereClause");
+$total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
-$total_stok = mysqli_fetch_assoc($stok_query)['total'];
-
+// Query Utama
 $query = mysqli_query($conn,"
-SELECT *
-FROM peminjaman
-WHERE $whereClause
-ORDER BY nama_material ASC
-LIMIT $offset,$limit
+    SELECT *
+    FROM peminjaman
+    WHERE $whereClause
+    ORDER BY nama_material ASC
+    LIMIT $offset,$limit
 ");
-
-if(!$query){
-    die(mysqli_error($conn));
-}
 
 if(!$query){
     die("Query Gagal: " . mysqli_error($conn));
@@ -87,9 +75,6 @@ if(!$query){
             font-weight: 700; 
             box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); 
             border-radius: 10px; 
-        }
-        .dropdown-container .active-menu i { 
-            color: #ffffff !important; 
         }
         
         .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
@@ -135,7 +120,7 @@ if(!$query){
         <a href="/monitoring_barang/ba/index.php">Database BA</a>
     </div>
 
-   <button class="dropdown-btn active">
+    <button class="dropdown-btn active">
         <span class="menu-content-wrapper"><i class="fa-solid fa-tags menu-icon"></i><span>Kategori</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
@@ -156,13 +141,6 @@ if(!$query){
     <div class="dropdown-container">
         <a href="/monitoring_barang/import/material.php">Import Material</a>
         <a href="/monitoring_barang/import/ba.php">Import BA</a>
-        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
-        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
-        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
-        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -217,16 +195,13 @@ if(!$query){
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height:100%;">Saring</button>
                     </div>
-                 <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-<div class="col-md-2">
-    <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center"
-       style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none; height:100%;">
-        <i class="fa-solid fa-plus me-1"></i> Tambah
-    </a>
-</div>
-
-<?php } ?>
+                    <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
+                    <div class="col-md-2">
+                        <a href="tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none; height:100%;">
+                            <i class="fa-solid fa-plus me-1"></i> Tambah
+                        </a>
+                    </div>
+                    <?php } ?>
                 </div>
             </form>
         </div>
@@ -270,92 +245,68 @@ if(!$query){
                         <td><span class="badge bg-warning text-dark px-2 py-1"><?= number_format((float)($d['jumlah'] ?? 0)); ?></span></td>
                         <td><?= htmlspecialchars($d['satuan'] ?? '-'); ?></td>
                         
-                        <!-- KODE BARU (OTOMATIS) -->
-<td>
-    <?php
-    $jumlah_pinjam = (int)($d['jumlah'] ?? 0);
-    $jumlah_kembali = (int)($d['jumlah_dikembalikan'] ?? 0);
-    $status_manual = strtoupper(trim($d['status_kembali'] ?? ''));
+                        <!-- STATUS OTOMATIS -->
+                        <td>
+                            <?php
+                            $jumlah_pinjam = (int)($d['jumlah'] ?? 0);
+                            $jumlah_kembali = (int)($d['jumlah_dikembalikan'] ?? 0);
+                            $status_manual = strtoupper(trim($d['status_kembali'] ?? ''));
 
-    // Jika jumlah dikembalikan sama atau lebih besar dari jumlah pinjam, 
-    // ATAU jika status manualnya memang sudah di-set "SUDAH"
-    if (($jumlah_kembali >= $jumlah_pinjam && $jumlah_pinjam > 0) || $status_manual == 'SUDAH') {
-        echo '<span class="badge bg-success">SUDAH</span>';
-    } else {
-        echo '<span class="badge bg-warning text-dark">BELUM</span>';
-    }
-    ?>
-</td>
+                            if (($jumlah_kembali >= $jumlah_pinjam && $jumlah_pinjam > 0) || $status_manual == 'SUDAH') {
+                                echo '<span class="badge bg-success">SUDAH</span>';
+                            } else {
+                                echo '<span class="badge bg-warning text-dark">BELUM</span>';
+                            }
+                            ?>
+                        </td>
                         <td><?= htmlspecialchars($d['jumlah_dikembalikan'] ?? '-'); ?></td>
                         
-                      <td>
-    <?php if(!empty($d['link_ba_ambil'])): ?>
-        <a href="upload/<?= htmlspecialchars($d['link_ba_ambil']); ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-link"></i> BA Ambil</a>
-    <?php else: ?> - <?php endif; ?>
-</td>
-<td>
-    <?php if(!empty($d['link_ba_kembali'])): ?>
-        <a href="upload/<?= htmlspecialchars($d['link_ba_kembali']); ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-link"></i> BA Kembali</a>
-    <?php else: ?> - <?php endif; ?>
-</td>
+                        <td>
+                            <?php if(!empty($d['link_ba_ambil'])): ?>
+                                <a href="upload/<?= htmlspecialchars($d['link_ba_ambil']); ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-link"></i> BA Ambil</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if(!empty($d['link_ba_kembali'])): ?>
+                                <a href="upload/<?= htmlspecialchars($d['link_ba_kembali']); ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-link"></i> BA Kembali</a>
+                            <?php else: ?> - <?php endif; ?>
+                        </td>
                         
-                       <!-- KODE BARU YANG SUDAH DIPERBAIKI -->
-<td>
-    <?php 
-    // Ubah string JSON dari database menjadi array PHP
-    $docs = json_decode($d['dokumentasi'] ?? '[]', true); 
-    
-    if(!empty($docs) && is_array($docs)): 
-        foreach($docs as $index => $file):
-            // Tentukan icon berdasarkan ekstensi file
-            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-            $icon = in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']) ? 'fa-image' : 'fa-file-lines';
-            
-            // Berikan folder path 'upload/' di depan nama file
-            ?>
-            <a href="upload/<?= htmlspecialchars($file); ?>" target="_blank" class="btn btn-xs btn-outline-secondary me-1 mb-1" style="font-size: 0.75rem;">
-                <i class="fa-solid <?= $icon; ?>"></i> File <?= $index + 1; ?>
-            </a>
-            <?php 
-        endforeach;
-    else: 
-        echo '-'; 
-    endif; 
-    ?>
-</td>
+                        <!-- DOKUMENTASI -->
+                        <td>
+                            <?php 
+                            $docs = json_decode($d['dokumentasi'] ?? '[]', true); 
+                            if(!empty($docs) && is_array($docs)): 
+                                foreach($docs as $index => $file):
+                                    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                                    $icon = in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']) ? 'fa-image' : 'fa-file-lines';
+                                    ?>
+                                    <a href="upload/<?= htmlspecialchars($file); ?>" target="_blank" class="btn btn-xs btn-outline-secondary me-1 mb-1" style="font-size: 0.75rem;">
+                                        <i class="fa-solid <?= $icon; ?>"></i> File <?= $index + 1; ?>
+                                    </a>
+                                    <?php 
+                                endforeach;
+                            else: 
+                                echo '-'; 
+                            endif; 
+                            ?>
+                        </td>
                         <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
-                     <td class="text-center">
-    <div class="btn-group gap-1">
-
-        <!-- Semua user boleh melihat detail -->
-        <a href="detail.php?id=<?= $d['id']; ?>"
-           class="btn btn-xs btn-outline-info rounded-2 p-1 px-2"
-           style="font-size:0.75rem;"
-           title="Detail">
-            <i class="fa-solid fa-eye"></i>
-        </a>
-
-        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-            <a href="edit.php?id=<?= $d['id']; ?>"
-               class="btn btn-xs btn-outline-warning rounded-2 p-1 px-2"
-               style="font-size:0.75rem;"
-               title="Edit">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </a>
-
-            <a href="hapus.php?id=<?= $d['id']; ?>"
-               class="btn btn-xs btn-outline-danger rounded-2 p-1 px-2"
-               style="font-size:0.75rem;"
-               title="Hapus"
-               onclick="return confirm('Apakah Anda yakin ingin menghapus data peminjaman ini?');">
-                <i class="fa-solid fa-trash-can"></i>
-            </a>
-
-        <?php } ?>
-
-    </div>
-</td>
+                        <td class="text-center">
+                            <div class="btn-group gap-1">
+                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-xs btn-outline-info rounded-2 p-1 px-2" style="font-size:0.75rem;" title="Detail">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
+                                    <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-xs btn-outline-warning rounded-2 p-1 px-2" style="font-size:0.75rem;" title="Edit">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-xs btn-outline-danger rounded-2 p-1 px-2" style="font-size:0.75rem;" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus data peminjaman ini?');">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </a>
+                                <?php } ?>
+                            </div>
+                        </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

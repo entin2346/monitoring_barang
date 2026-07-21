@@ -1,21 +1,24 @@
 <?php
 session_start();
 if(!isset($_SESSION['login'])){
-    header("Location: ../login/index.php");
+    header("Location: ../../login/index.php");
     exit;
 }
 include "../../config/koneksi.php";
 
-$cari = trim($_GET['cari'] ?? '');
+$cari = $_GET['cari'] ?? '';
+$cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
-$whereClause = "jenis_kategori = ?";
-$types = "s";
-$params = ['pre_memory'];
+// =========================================================================
+// FILTER FLEKSIBEL: Adaptif terhadap variasi penulisan 'pre_memory'
+// =========================================================================
+$whereClause = "(
+    LOWER(REPLACE(REPLACE(TRIM(jenis_kategori), '-', ' '), '_', ' ')) = 'pre memory' 
+    OR LOWER(TRIM(jenis_kategori)) LIKE '%pre%memory%'
+)";
 
-if ($cari !== '') {
-    $whereClause .= " AND nama_material LIKE ?";
-    $types .= "s";
-    $params[] = "%{$cari}%";
+if ($cari_clean !== '') {
+    $whereClause .= " AND (nama_material LIKE '%$cari_clean%' OR lokasi_penyimpanan LIKE '%$cari_clean%')";
 }
 
 // Fitur Mutasi Halaman (Pagination)
@@ -24,56 +27,22 @@ $page = max(1, (int)($_GET['page'] ?? 1));
 $offset = ($page - 1) * $limit;
 
 // Hitung total item hasil filter
-$sql = "SELECT COUNT(*) AS total
-        FROM material_gudang
-        WHERE $whereClause";
-
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, $types, ...$params);
-mysqli_stmt_execute($stmt);
-
-$result = mysqli_stmt_get_result($stmt);
-$total_data = mysqli_fetch_assoc($result)['total'] ?? 0;
-
-mysqli_stmt_close($stmt);
+$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM material_gudang WHERE $whereClause");
+$total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
 $total_halaman = ceil($total_data / $limit);
 
 // Hitung akumulasi volume stok khusus Pre Memory
-$sql = "SELECT SUM(jumlah) AS total
-        FROM material_gudang
-        WHERE $whereClause";
+$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM material_gudang WHERE $whereClause");
+$total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, $types, ...$params);
-mysqli_stmt_execute($stmt);
-
-$result = mysqli_stmt_get_result($stmt);
-$total_stok = mysqli_fetch_assoc($result)['total'] ?? 0;
-
-mysqli_stmt_close($stmt);
-
-// Ambil data dari database sesuai urutan baris input asli (berdasarkan id)
-$sql = "SELECT
-            id,
-            nama_material,
-            satuan,
-            jumlah,
-            lokasi_penyimpanan
-        FROM material_gudang
-        WHERE $whereClause
-        ORDER BY id ASC
-        LIMIT ?, ?";
-
-$stmt = mysqli_prepare($conn, $sql);
-
-$typesSelect = $types . "ii";
-$paramsSelect = array_merge($params, [$offset, $limit]);
-
-mysqli_stmt_bind_param($stmt, $typesSelect, ...$paramsSelect);
-
-mysqli_stmt_execute($stmt);
-
-$query = mysqli_stmt_get_result($stmt);
+// Ambil data dari database
+$query = mysqli_query($conn, "
+    SELECT id, nama_material, satuan, jumlah, lokasi_penyimpanan
+    FROM material_gudang
+    WHERE $whereClause
+    ORDER BY id DESC
+    LIMIT $offset, $limit
+");
 
 if(!$query){
     die("Query Gagal: " . mysqli_error($conn));
@@ -129,7 +98,6 @@ if(!$query){
         .sidebar .menu-content-wrapper { display: flex; align-items: center; gap: 12px; }
         .sidebar a i, .dropdown-btn i.menu-icon { font-size: 1.05rem; width: 20px; text-align: center; color: #1e40af; }
         
-        /* Tombol Utama (Kategori) saat Aktif */
         .sidebar .dropdown-btn.active {
             color: #ffffff !important; 
             background: #0284c7 !important; 
@@ -137,12 +105,10 @@ if(!$query){
             box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); 
             border-radius: 10px;
         }
-        .sidebar .dropdown-btn.active i { 
-            color: #ffffff !important; 
-        }
+        .sidebar .dropdown-btn.active i { color: #ffffff !important; }
 
         .dropdown-chevron { font-size: 0.75rem !important; transition: transform 0.2s ease; color: #1e40af !important; }
-        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); }
+        .dropdown-btn.active .dropdown-chevron { transform: rotate(180deg); color: #ffffff !important; }
         
         .dropdown-container { display: none; padding-left: 12px; margin-bottom: 6px; margin-top: 4px; }
         .dropdown-container a { 
@@ -151,7 +117,6 @@ if(!$query){
         }
         .dropdown-container a:hover { background: #ffffff; color: #0284c7; }
 
-        /* Submenu (Pre Memory) saat Aktif - Sekarang Berwarna Biru Pekat */
         .dropdown-container a.active-menu {
             color: #ffffff !important; 
             background: #0284c7 !important; 
@@ -226,13 +191,6 @@ if(!$query){
     <div class="dropdown-container">
         <a href="/monitoring_barang/import/material.php">Import Material</a>
         <a href="/monitoring_barang/import/ba.php">Import BA</a>
-        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
-        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
-        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
-        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -281,23 +239,19 @@ if(!$query){
                     <div class="col-md-8">
                         <div class="input-group input-cyber-group">
                             <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                            <input type="text" name="cari" class="form-control" autocomplete="off" placeholder="Cari material khusus Pre Memory..." value="<?= htmlspecialchars($cari); ?>">
+                            <input type="text" name="cari" class="form-control" autocomplete="off" placeholder="Cari material khusus Pre Memory..." value="<?= htmlspecialchars($cari_clean); ?>">
                         </div>
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100 fw-bold py-2" style="border-radius: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; height:100%;"><i class="fa-solid fa-sliders me-1"></i> Saring</button>
                     </div>
-                  <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-<div class="col-md-2">
-    <a href="tambah.php"
-       class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center"
-       style="border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;height:100%;">
-        <i class="fa-solid fa-plus me-1"></i> Tambah
-    </a>
-</div>
-
-<?php } ?>
+                    <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
+                    <div class="col-md-2">
+                        <a href="../../material/tambah.php" class="btn btn-success w-100 fw-bold py-2 d-flex align-items-center justify-content-center" style="border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;height:100%;">
+                            <i class="fa-solid fa-plus me-1"></i> Tambah
+                        </a>
+                    </div>
+                    <?php } ?>
                 </div>
             </form>
         </div>
@@ -344,35 +298,21 @@ if(!$query){
                             <i class="fa-solid fa-map-pin text-danger opacity-70 me-2 small"></i>
                             <?= htmlspecialchars($lokasi_web); ?>
                         </td>
-                       <td class="text-center">
-    <div class="btn-group gap-1">
-
-        <!-- Semua user boleh melihat detail -->
-        <a href="detail.php?id=<?= $d['id']; ?>"
-           class="btn btn-sm btn-outline-info"
-           title="Detail">
-            <i class="fa-solid fa-eye"></i>
-        </a>
-
-        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
-
-            <a href="edit.php?id=<?= $d['id']; ?>"
-               class="btn btn-sm btn-outline-warning"
-               title="Edit">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </a>
-
-            <a href="hapus.php?id=<?= (int)$d['id']; ?>"
-               class="btn btn-sm btn-outline-danger"
-               title="Hapus"
-               onclick="return confirm('Apakah anda yakin ingin menghapus data ini?');">
-                <i class="fa-solid fa-trash-can"></i>
-            </a>
-
-        <?php } ?>
-
-    </div>
-</td>
+                        <td class="text-center">
+                            <div class="btn-group gap-1">
+                                <a href="../../material/detail.php?id=<?= $d['id']; ?>" class="btn btn-sm btn-outline-info" title="Detail">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <?php if(isset($_SESSION['role']) && strtolower($_SESSION['role']) == 'admin'){ ?>
+                                    <a href="../../material/edit.php?id=<?= $d['id']; ?>" class="btn btn-sm btn-outline-warning" title="Edit">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <a href="../../material/hapus.php?id=<?= (int)$d['id']; ?>" class="btn btn-sm btn-outline-danger" title="Hapus" onclick="return confirm('Apakah anda yakin ingin menghapus data ini?');">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </a>
+                                <?php } ?>
+                            </div>
+                        </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>

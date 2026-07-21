@@ -33,6 +33,9 @@ $offset = ($page - 1) * $limit;
 $whereConditions = [];
 $whereConditions[] = "TRIM(m.nama_material) <> '' AND m.nama_material IS NOT NULL";
 
+// KECUALIKAN KATEGORI EX BONGKARAN DARI TAMPILAN MATERIAL GUDANG
+$whereConditions[] = "LOWER(TRIM(m.jenis_kategori)) NOT IN ('ex bongkaran', 'eks bongkaran')";
+
 if ($cari_clean !== '') {
     $whereConditions[] = "(m.nama_material LIKE '%$cari_clean%')";
 }
@@ -529,67 +532,50 @@ if(!$query){
                         while($d = mysqli_fetch_assoc($query)){
                             $kat_real = strtolower(trim($d['jenis_kategori'] ?? ''));
                             $id_material = (int)$d['id'];
-                            $kategori_aktif = isset($kategori_db) ? strtolower(trim($kategori_db)) : '';
                     ?>
                     <tr>
                         <td class="text-center fw-bold" style="color: var(--text-muted) !important;"><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
                         <td class="fw-bold"><?= htmlspecialchars($d['nama_material'], ENT_QUOTES, 'UTF-8'); ?></td>
                         <td>
                             <?php 
-                            if ($kategori_aktif == 'stok' || $kategori_aktif == 'stock') {
-                                echo '<span class="badge-kat kat-stock">Stok</span>';
-                            } elseif ($kategori_aktif == 'non stok' || $kategori_aktif == 'non-stok' || $kategori_aktif == 'non stock') {
-                                echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
-                            } else {
-                            
+                            // PENCETAKAN DINAMIS SESUAI DATABASE:
+                            switch($kat_real){
+                                case 'stok':
+                                case 'stock':
+                                    echo '<span class="badge-kat kat-stock">Stok</span>';
+                                    break;
 
-switch($kat_real){
+                                case 'non stok':
+                                case 'non-stok':
+                                case 'non stock':
+                                    echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
+                                    break;
 
-    case 'stok':
-    case 'stock':
+                                case 'non po':
+                                    echo '<span class="badge-kat kat-other">NON PO</span>';
+                                    break;
 
-        echo '<span class="badge-kat kat-stock">Stok</span>';
-        break;
+                                case 'ex bongkaran':
+                                    echo '<span class="badge-kat kat-other">EX BONGKARAN</span>';
+                                    break;
 
-    case 'non stok':
-    case 'non-stock':
-    case 'non stock':
+                                case 'pre memory':
+                                    echo '<span class="badge-kat kat-other">PRE MEMORY</span>';
+                                    break;
 
-        echo '<span class="badge-kat kat-nonstock">Non Stok</span>';
-        break;
+                                case 'peminjaman':
+                                    echo '<span class="badge-kat kat-other">PEMINJAMAN</span>';
+                                    break;
 
-    case 'non po':
+                                case 'pemakaian':
+                                    echo '<span class="badge-kat kat-other">PEMAKAIAN</span>';
+                                    break;
 
-        echo '<span class="badge-kat kat-other">NON PO</span>';
-        break;
-
-    case 'ex bongkaran':
-
-        echo '<span class="badge-kat kat-other">EX BONGKARAN</span>';
-        break;
-
-    case 'pre memory':
-
-        echo '<span class="badge-kat kat-other">PRE MEMORY</span>';
-        break;
-
-    case 'peminjaman':
-
-        echo '<span class="badge-kat kat-other">PEMINJAMAN</span>';
-        break;
-
-    case 'pemakaian':
-
-        echo '<span class="badge-kat kat-other">PEMAKAIAN</span>';
-        break;
-
-    default:
-
-        echo '<span class="badge-kat kat-other">'
-            . htmlspecialchars(strtoupper($d['jenis_kategori'] ?: '-'))
-            . '</span>';
-
-}
+                                default:
+                                    echo '<span class="badge-kat kat-other">'
+                                        . htmlspecialchars(strtoupper($d['jenis_kategori'] ?: '-'), ENT_QUOTES, 'UTF-8')
+                                        . '</span>';
+                                    break;
                             }
                             ?>
                         </td>
@@ -608,30 +594,28 @@ switch($kat_real){
                         <td><?= htmlspecialchars($d['lokasi_penyimpanan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
                         <td class="fw-semibold text-primary"><?= htmlspecialchars($d['sumber_barang'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
                         <td><span class="small text-muted"><?= htmlspecialchars($d['keterangan'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></span></td>
-                       <td class="text-center">
-    <div class="btn-action-group">
+                        <td class="text-center">
+                            <div class="btn-action-group">
+                                <!-- Semua user boleh melihat detail -->
+                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn-action-item btn-view">
+                                    <i class="fa-solid fa-expand"></i>
+                                </a>
 
-        <!-- Semua user boleh melihat detail -->
-        <a href="detail.php?id=<?= $d['id']; ?>" class="btn-action-item btn-view">
-            <i class="fa-solid fa-expand"></i>
-        </a>
+                                <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
 
-        <?php if(strtolower($_SESSION['role']) == 'admin'){ ?>
+                                    <a href="edit.php?id=<?= $d['id']; ?>" class="btn-action-item btn-edit">
+                                        <i class="fa-solid fa-user-pen"></i>
+                                    </a>
 
-            <a href="edit.php?id=<?= $d['id']; ?>" class="btn-action-item btn-edit">
-                <i class="fa-solid fa-user-pen"></i>
-            </a>
+                                    <a href="hapus.php?id=<?= $d['id']; ?>"
+                                       class="btn-action-item btn-delete"
+                                       onclick="return confirm('Hapus permanently?')">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </a>
 
-            <a href="hapus.php?id=<?= $d['id']; ?>"
-               class="btn-action-item btn-delete"
-               onclick="return confirm('Hapus permanently?')">
-                <i class="fa-solid fa-trash-can"></i>
-            </a>
-
-        <?php } ?>
-
-    </div>
-</td>
+                                <?php } ?>
+                            </div>
+                        </td>
                     </tr>
                     <?php
                         }

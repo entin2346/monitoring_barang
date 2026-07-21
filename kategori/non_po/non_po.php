@@ -10,17 +10,16 @@ include "../../config/koneksi.php";
 $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
-// KUNCI FILTER: Hanya menarik data kategori NON PO
-$whereClause = "1=1";
+// =========================================================================
+// PERBAIKAN FILTER: Mengambil dari material_gudang dengan filter Non PO
+// =========================================================================
+$whereClause = "(
+    LOWER(REPLACE(REPLACE(TRIM(jenis_kategori), '-', ' '), '_', ' ')) = 'non po' 
+    OR LOWER(TRIM(jenis_kategori)) LIKE '%non%po%'
+)";
 
-if($cari_clean!=''){
-    $whereClause .= " AND (
-        nama_material LIKE '%$cari_clean%' OR
-        merk_jenis LIKE '%$cari_clean%' OR
-        asal_vendor LIKE '%$cari_clean%' OR
-        tujuan LIKE '%$cari_clean%' OR
-        sumber_barang LIKE '%$cari_clean%'
-    )";
+if ($cari_clean !== '') {
+    $whereClause .= " AND (nama_material LIKE '%$cari_clean%' OR lokasi_penyimpanan LIKE '%$cari_clean%' OR no_rak LIKE '%$cari_clean%')";
 }
 
 // Fitur Mutasi Halaman (Pagination)
@@ -29,26 +28,28 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if($page < 1){ $page = 1; }
 $offset = ($page - 1) * $limit;
 
-// Hitung total item hasil filter
-$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM non_po WHERE $whereClause");
+// Hitung total item hasil filter dari tabel material_gudang
+$total_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM material_gudang WHERE $whereClause");
 $total_data = mysqli_fetch_assoc($total_query)['total'] ?? 0;
 $total_halaman = ceil($total_data / $limit);
 
 // Hitung akumulasi volume stok khusus Non PO
-$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM non_po WHERE $whereClause");
+$stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM material_gudang WHERE $whereClause");
 $total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
-// Ambil data dari database dengan pengurutan No Rak khusus
-$query = mysqli_query($conn,"
-SELECT *
-FROM non_po
-WHERE $whereClause
-ORDER BY tanggal DESC,nama_material ASC
-LIMIT $offset,$limit
-");
+// Query Utama dari tabel material_gudang
+$query_sql = "
+    SELECT *
+    FROM material_gudang
+    WHERE $whereClause
+    ORDER BY id DESC
+    LIMIT $offset, $limit
+";
+
+$query = mysqli_query($conn, $query_sql);
 
 if(!$query){
-    die(mysqli_error($conn));
+    die("Gagal memuat data tabel: " . mysqli_error($conn));
 }
 ?>
 <!DOCTYPE html>
@@ -80,7 +81,6 @@ if(!$query){
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         
-        /* FIX: Ubah overflow-x dari hidden menjadi auto agar halaman luar bisa fleksibel di mobile */
         body { 
             background: var(--bg-body); 
             color: var(--text-main); 
@@ -137,7 +137,6 @@ if(!$query){
         .sidebar .logout-button i, .sidebar .logout-button span { color: #b91c1c !important; }
         .sidebar .logout-button:hover { background: #fee2e2; transform: none; }
 
-        /* FIX: Set min-width agar konten utama tidak remuk saat layar diperkecil */
         .content { margin-left: 260px; position: relative; min-width: 320px; }
         .navbar-custom { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
         .navbar-custom .navbar-brand { color: var(--text-main); font-weight: 800; font-size: 1.3rem; }
@@ -149,7 +148,6 @@ if(!$query){
 
         .cyber-search-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
 
-        /* FIX: Tambahkan properti wajib overflow-x auto agar tabel bisa di-swipe / di-geser kanan kiri secara mandiri */
         .cyber-table-wrapper { 
             border: 1px solid var(--border-color); 
             border-radius: 16px; 
@@ -165,7 +163,6 @@ if(!$query){
 
         .neon-badge-stock { background: rgba(2, 132, 199, 0.06) !important; color: var(--primary) !important; border: 1px solid rgba(2, 132, 199, 0.1) !important; border-radius: 8px; padding: 5px 12px; font-weight: 700; font-size: 0.8rem; display: inline-block; }
 
-        /* FIX: Responsivitas Media Query Layar HP dan Tablet kecil */
         @media (max-width: 991.98px) {
             .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid rgba(2, 132, 199, 0.15); padding: 20px; }
             .content { margin-left: 0; }
@@ -216,13 +213,6 @@ if(!$query){
     <div class="dropdown-container">
         <a href="/monitoring_barang/import/material.php">Import Material</a>
         <a href="/monitoring_barang/import/ba.php">Import BA</a>
-        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
-        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
-        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
-        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
-        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
-        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -265,7 +255,6 @@ if(!$query){
             </div>
         </div>
 
-        <!-- Tombol Saring dan Tambah Sejajar Melebar Penuh -->
         <div class="cyber-search-box mb-4 d-flex justify-content-between align-items-center gap-3">
             <form method="GET" class="d-flex gap-2" style="flex: 1;">
                 <div class="input-group" style="flex: 1;">
@@ -278,29 +267,23 @@ if(!$query){
                     <i class="fa-solid fa-sliders"></i> Saring
                 </button>
             </form>
-            <a href="tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #059669; border: none; height: 46px; white-space: nowrap;">
+            <a href="../../material/tambah.php" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2" style="border-radius: 12px; background-color: #059669; border: none; height: 46px; white-space: nowrap;">
                 <i class="fa-solid fa-plus"></i> Tambah
             </a>
         </div>
 
-        <!-- FIX: Ditambahkan kelas bootstrap table-responsive asli pembungkus area luar div -->
         <div class="cyber-table-wrapper table-responsive mb-4">
             <table class="table-cyber">
                 <thead>
                     <tr>
                         <th>NO</th>
-                        <th>JENIS BA</th>
-                        <th>TANGGAL</th>
-                        <th>NAMA BARANG</th>
-                        <th>MERK/JENIS</th>
-                        <th>JENIS BARANG</th>
-                        <th>SUMBER BARANG</th>
+                        <th>NAMA MATERIAL</th>
                         <th>SATUAN</th>
                         <th>JUMLAH</th>
-                        <th>TUJUAN</th>
+                        <th>NO RAK</th>
                         <th>KONDISI</th>
-                        <th>VENDOR</th>
-                        <th>BERITA ACARA</th>
+                        <th>LOKASI PENYIMPANAN</th>
+                        <th>KETERANGAN</th>
                         <th width="120" class="text-center">AKSI</th>
                     </tr>
                 </thead>
@@ -312,31 +295,24 @@ if(!$query){
                     ?>
                     <tr>
                         <td><?= str_pad($no++, 2, '0', STR_PAD_LEFT); ?></td>
-                        <td><?= htmlspecialchars($d['jenis_ba'] ?? ''); ?></td>
-                        <td><?= !empty($d['tanggal']) ? date('d-m-Y', strtotime($d['tanggal'])) : '-'; ?></td>
-                        <td><?= htmlspecialchars($d['nama_material'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['merk_jenis'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['jenis_barang'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['sumber_barang'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['satuan'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($d['nama_material'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['satuan'] ?? '-'); ?></td>
                         <td><span class="neon-badge-stock"><?= number_format((int)($d['jumlah'] ?? 0)); ?></span></td>
-                        <td><?= htmlspecialchars($d['tujuan'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['kondisi_material'] ?? $d['kondisi'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['asal_vendor'] ?? $d['vendor'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($d['berita_acara'] ?? ''); ?></td>
-                        <!-- Kolom Aksi di Ujung Kanan Bgt -->
+                        <td><?= htmlspecialchars($d['no_rak'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['kondisi'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['lokasi_penyimpanan'] ?? '-'); ?></td>
+                        <td><?= htmlspecialchars($d['keterangan'] ?? '-'); ?></td>
                         <td class="text-center">
                             <div class="d-flex gap-1 justify-content-center">
-                                <a href="detail.php?id=<?= $d['id']; ?>" class="btn btn-info btn-sm text-white" title="Detail"><i class="fa-solid fa-eye"></i></a>
-                                <a href="edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa-solid fa-pen"></i></a>
-                                <a href="hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
+                                <a href="../../material/edit.php?id=<?= $d['id']; ?>" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa-solid fa-pen"></i></a>
+                                <a href="../../material/hapus.php?id=<?= $d['id']; ?>" class="btn btn-danger btn-sm text-white" title="Hapus" onclick="return confirm('Yakin ingin menghapus data ini?')"><i class="fa-solid fa-trash"></i></a>
                             </div>
                         </td>
                     </tr>
                     <?php } } else { ?>
                     <tr>
-                        <td colspan="14" class="text-center py-5" style="color: var(--text-muted) !important;">
-                            <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data kosong atau tidak ditemukan.
+                        <td colspan="9" class="text-center py-5" style="color: var(--text-muted) !important;">
+                            <i class="fa-solid fa-satellite-dish d-block fs-1 mb-3 text-muted opacity-25"></i> Data Kategori Non PO tidak ditemukan.
                         </td>
                     </tr>
                     <?php } ?>
@@ -369,7 +345,7 @@ if(!$query){
     document.querySelectorAll('.dropdown-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Mencegah bentrok trigger di mobile
+            e.stopPropagation();
             const container = this.nextElementSibling;
             this.classList.toggle('active');
             
@@ -381,7 +357,6 @@ if(!$query){
         });
     });
     
-    // Penanganan swipe touch layar agar mulus
     document.addEventListener('touchstart', function(){}, {passive: true});
 </script>
 </body>

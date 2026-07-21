@@ -10,11 +10,16 @@ include "../../config/koneksi.php";
 $cari = $_GET['cari'] ?? '';
 $cari_clean = trim(mysqli_real_escape_string($conn, urldecode($cari)));
 
-// KUNCI FILTER: Diselaraskan dengan logika index.php (Membaca teks kategori ATAU ID > 63)
-$whereClause = "LOWER(TRIM(jenis_kategori)) = 'non_stok'";
+// =========================================================================
+// PERBAIKAN UTAMA: Fleksibel membaca 'NON STOK', 'non_stok', 'NON-STOK', dll
+// =========================================================================
+$whereClause = "(
+    LOWER(REPLACE(REPLACE(TRIM(jenis_kategori), '-', ' '), '_', ' ')) = 'non stok' 
+    OR LOWER(TRIM(jenis_kategori)) LIKE '%non%stok%'
+)";
 
 if ($cari_clean !== '') {
-    $whereClause .= " AND (nama_material LIKE '%$cari_clean%')";
+    $whereClause .= " AND (nama_material LIKE '%$cari_clean%' OR lokasi_penyimpanan LIKE '%$cari_clean%' OR no_rak LIKE '%$cari_clean%')";
 }
 
 // Fitur Mutasi Halaman (Pagination)
@@ -32,7 +37,7 @@ $total_halaman = ceil($total_data / $limit);
 $stok_query = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM material_gudang WHERE $whereClause");
 $total_stok = mysqli_fetch_assoc($stok_query)['total'] ?? 0;
 
-// --- PERBAIKAN QUERY UTAMA ---
+// Query Utama
 $query_sql = "
     SELECT *
     FROM material_gudang
