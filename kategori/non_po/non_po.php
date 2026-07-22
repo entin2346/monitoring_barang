@@ -210,10 +210,18 @@ if(!$query){
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span>
         <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
     </button>
-    <div class="dropdown-container">
+       <div class="dropdown-container">
         <a href="/monitoring_barang/import/material.php">Import Material</a>
         <a href="/monitoring_barang/import/ba.php">Import BA</a>
+        <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
+        <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
+        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
+        <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
+        <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
+        <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
+        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
+
 
     <button class="dropdown-btn">
         <span class="menu-content-wrapper"><i class="fa-solid fa-file-export menu-icon"></i><span>Export</span></span>

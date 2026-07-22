@@ -522,7 +522,7 @@ $daftar_material_gudang = mysqli_query($conn, "SELECT * FROM material_gudang ORD
 
         $('.dropdown-btn').on('click', function(e) {
             e.preventDefault();
-            const container = $(this).next('.dropdown-container');
+            const container = $(this).next('.dropdown-container');git pull
             $(this).toggleClass('active');
             container.slideToggle(200);
         });
