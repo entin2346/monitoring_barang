@@ -277,11 +277,9 @@ if (isset($_POST['update'])) {
     <div class="dropdown-container" style="display: block;">
         <a href="/monitoring_barang/kategori/stok/stok.php">Stok</a>
         <a href="/monitoring_barang/kategori/non_stok/non_stok.php">Non Stok</a>
-        <a href="/monitoring_barang/kategori/non_po/non_po.php">Non PO</a>
         <a href="/monitoring_barang/kategori/ex_bongkaran/ex_bongkaran.php" class="active-menu">Ex Bongkaran</a>
         <a href="/monitoring_barang/kategori/pre_memory/pre_memory.php">Pre Memory</a>
         <a href="/monitoring_barang/kategori/peminjaman/peminjaman.php">Peminjaman</a>
-        <a href="/monitoring_barang/kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
     
     <a href="/monitoring_barang/login/logout.php" class="logout-button"><span class="menu-content-wrapper"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></span></a>

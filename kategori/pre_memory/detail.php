@@ -104,11 +104,9 @@ if(!$d){
     <div class="dropdown-container" style="display: block;">
         <a href="/monitoring_barang/kategori/stok/stok.php">Stok</a>
         <a href="/monitoring_barang/kategori/non_stok/non_stok.php">Non Stok</a>
-        <a href="/monitoring_barang/kategori/non_po/non_po.php">Non PO</a>
         <a href="/monitoring_barang/kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
         <a href="/monitoring_barang/kategori/pre_memory/pre_memory.php" class="active-menu">Pre Memory</a>
         <a href="/monitoring_barang/kategori/peminjaman/peminjaman.php">Peminjaman</a>
-        <a href="/monitoring_barang/kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">
@@ -120,11 +118,9 @@ if(!$d){
         <a href="/monitoring_barang/import/ba.php">Import BA</a>
         <a href="/monitoring_barang/import/form_stok.php">Import Stok</a>
         <a href="/monitoring_barang/import/form_non_stok.php">Import Non Stok</a>
-        <a href="/monitoring_barang/import/form_non_po.php">Import Non PO</a>
         <a href="/monitoring_barang/import/form_ex_bongkaran.php">Import Ex Bongkaran</a>
         <a href="/monitoring_barang/import/form_pre_memory.php">Import Pre Memory</a>
         <a href="/monitoring_barang/import/form_peminjaman.php">Import Peminjaman</a>
-        <a href="/monitoring_barang/import/form_pemakaian.php">Import Pemakaian</a>
     </div>
 
     <button class="dropdown-btn">

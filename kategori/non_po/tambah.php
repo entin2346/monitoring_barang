@@ -162,11 +162,9 @@ if (isset($_POST['submit'])) {
     <div class="dropdown-container" style="display: block;">
         <a href="/monitoring_barang/kategori/stok/stok.php">Stok</a>
         <a href="/monitoring_barang/kategori/non_stok/non_stok.php">Non Stok</a>
-        <a href="/monitoring_barang/kategori/non_po/non_po.php" class="active-menu">Non PO</a>
         <a href="/monitoring_barang/kategori/ex_bongkaran/ex_bongkaran.php">Ex Bongkaran</a>
         <a href="/monitoring_barang/kategori/pre_memory/pre_memory.php">Pre Memory</a>
         <a href="/monitoring_barang/kategori/peminjaman/peminjaman.php">Peminjaman</a>
-        <a href="/monitoring_barang/kategori/pemakaian/pemakaian.php">Pemakaian</a>
     </div>
 
     <button class="dropdown-btn"><span class="menu-content-wrapper"><i class="fa-solid fa-file-import menu-icon"></i><span>Import</span></span><i class="fa-solid fa-chevron-down dropdown-chevron"></i></button>
