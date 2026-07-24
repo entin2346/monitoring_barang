@@ -33,8 +33,7 @@ $offset = ($page - 1) * $limit;
 $whereConditions = [];
 $whereConditions[] = "TRIM(m.nama_material) <> '' AND m.nama_material IS NOT NULL";
 
-// KECUALIKAN KATEGORI EX BONGKARAN DARI TAMPILAN MATERIAL GUDANG
-$whereConditions[] = "LOWER(TRIM(m.jenis_kategori)) NOT IN ('ex bongkaran', 'eks bongkaran')";
+// --- BARIS PENGERING/PENGECUALIAN EX BONGKARAN SUDAH DIHAPUS DARI SINI ---
 
 if ($cari_clean !== '') {
     $whereConditions[] = "(m.nama_material LIKE '%$cari_clean%')";

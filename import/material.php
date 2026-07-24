@@ -23,16 +23,11 @@ if(isset($_POST['import'])){
         $handle = fopen($file, "r");
 
         if ($handle !== FALSE) {
-            // Prepared statement 1: Ke tabel material_gudang (Memperhitungkan NO_RAK agar rak berbeda tidak dianggap duplikat)
+            // Prepared statement untuk memasukkan SEMUA data ke tabel material_gudang
             $cek_mat = $conn->prepare("SELECT id FROM material_gudang WHERE LOWER(nama_material) = LOWER(?) AND LOWER(lokasi_penyimpanan) = LOWER(?) AND LOWER(no_rak) = LOWER(?) LIMIT 1");
             $stmt_mat = $conn->prepare("INSERT INTO material_gudang 
                 (nama_material, satuan, jumlah, no_rak, kondisi, lokasi_penyimpanan, keterangan, jenis_kategori) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-
-            // Prepared statement 2: Ke tabel ex_bongkaran (Langsung Insert Tanpa Cek Duplikat)
-            $stmt_ex = $conn->prepare("INSERT INTO ex_bongkaran 
-                (nama_material, satuan, jumlah, kondisi, lokasi_penyimpanan, keterangan_ex_bongkaran) 
-                VALUES (?, ?, ?, ?, ?, ?)");
 
             while(($data = fgetcsv($handle, 0, ",")) !== FALSE){
                 // Skip baris kosong
@@ -83,35 +78,27 @@ if(isset($_POST['import'])){
                 $jumlah = (int)round((float)$raw_jumlah);
 
                 // =========================================================================
-                // PERCABANGAN SIMPAN: EX BONGKARAN vs MATERIAL GUDANG
+                // PROSES SIMPAN: SEMUA KATEGORI (TERMASUK EX BONGKARAN) MASUK MATERIAL GUDANG
                 // =========================================================================
-                if (strcasecmp($kategori, 'Ex Bongkaran') === 0 || strcasecmp($kategori, 'Eks Bongkaran') === 0) {
-                    // LANGSUNG SIMPAN SEMUA DATA EX BONGKARAN (TANPA ANTI-DUPLIKAT)
-                    $stmt_ex->bind_param("ssisss", $nama_material, $satuan, $jumlah, $kondisi, $lokasi, $keterangan);
-                    if($stmt_ex->execute()){
-                        $jumlah_import++;
-                    }
-                } else {
-                    // Cek duplikat di tabel material_gudang (Memperhitungkan Nama, Lokasi, dan Rak)
-                    $cek_mat->bind_param("sss", $nama_material, $lokasi, $no_rak);
-                    $cek_mat->execute();
-                    $cek_mat->store_result();
-                    if($cek_mat->num_rows > 0){
-                        continue;
-                    }
+                
+                // Cek duplikat di tabel material_gudang (Memperhitungkan Nama, Lokasi, dan Rak)
+                $cek_mat->bind_param("sss", $nama_material, $lokasi, $no_rak);
+                $cek_mat->execute();
+                $cek_mat->store_result();
+                if($cek_mat->num_rows > 0){
+                    continue;
+                }
 
-                    // Simpan KE material_gudang untuk kategori lainnya
-                    $stmt_mat->bind_param("ssisssss", $nama_material, $satuan, $jumlah, $no_rak, $kondisi, $lokasi, $keterangan, $kategori);
-                    if($stmt_mat->execute()){
-                        $jumlah_import++;
-                    }
+                // Simpan KE material_gudang
+                $stmt_mat->bind_param("ssisssss", $nama_material, $satuan, $jumlah, $no_rak, $kondisi, $lokasi, $keterangan, $kategori);
+                if($stmt_mat->execute()){
+                    $jumlah_import++;
                 }
             }
 
             fclose($handle);
             $cek_mat->close();
             $stmt_mat->close();
-            $stmt_ex->close();
             $sukses_import = true;
         } else {
             $gagal_import = true;
@@ -334,7 +321,7 @@ if(isset($_POST['import'])){
                 <div class="cyber-import-container">
                     <div class="text-center mb-4">
                         <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-file-csv text-primary me-2"></i>Smart Import Data Material</h4>
-                        <p class="text-muted small">Sistem memisahkan <b>Ex Bongkaran</b> langsung ke tabel ex_bongkaran, sisanya ke Material Gudang.</p>
+                        <p class="text-muted small">Seluruh data material (termasuk <b>Ex Bongkaran</b>) akan otomatis tersimpan di halaman Material Gudang.</p>
                     </div>
 
                     <div class="cyber-alert-info mb-4">
@@ -344,7 +331,7 @@ if(isset($_POST['import'])){
                         </div>
                         <ul class="mb-0 small text-secondary" style="padding-left: 20px; line-height: 1.6; font-weight: 500;">
                             <li>Simpan file Excel Anda sebagai format <strong>.CSV (Comma Separated Values)</strong>.</li>
-                            <li>Seluruh data <strong>Ex Bongkaran</strong> otomatis masuk 100% ke tabel Ex Bongkaran.</li>
+                            <li>Semua data dari file CSV akan diimpor langsung ke tabel <strong>Material Gudang</strong>.</li>
                         </ul>
                     </div>
 
@@ -396,7 +383,7 @@ if(isset($_POST['import'])){
     <?php if($sukses_import): ?>
         Swal.fire({
             title: 'Import Sukses Sempurna!',
-            text: 'Sebanyak <?= $jumlah_import; ?> data material berhasil disimpan ke tujuan kategorinya masing-masing!',
+            text: 'Sebanyak <?= $jumlah_import; ?> data material berhasil disimpan ke Material Gudang!',
             icon: 'success',
             confirmButtonColor: '#0284c7',
             confirmButtonText: 'Selesai'
